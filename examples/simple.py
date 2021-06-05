@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
-#from vapor import Stack
-from vapor import S3
+from vapor import S3, Stack
 
 
-class S3Bucket(S3.Bucket):
-    BucketName = "website-bucket-name-o1dc0de"
+class Bucket(S3.Bucket):
     VersionControlConfiguration = {"Status": "Enabled"}
     PublicAccessBlockConfiguration = {
         "BlockPublicAcls": True,
@@ -19,32 +17,12 @@ class S3Bucket(S3.Bucket):
     }
 
 
-class S3BucketReal:
-    def __init__(self):
-        self.resource_type = "AWS::S3::Bucket"
-        self.properties = {
-            "BucketName": "website-bucket-name-o1dc0de",
-            "VersionControlConfiguration": {"Status": "Enabled"},
-            "PublicAccessBlockConfiguration": {
-                "BlockPublicAcls": True,
-                "BlockPublicPolicy": True,
-                "IgnorePublicAcls": True,
-                "RestrictPublicBuckets": True,
-            },
-            "BucketEncryption": {
-                "ServerSideEncryptionConfiguration": [
-                    {"ServerSideEncryptionByDefault": {"SSEAlgorithm": "AES256"}}
-                ]
-            }
-        }
+class S3Bucket(Bucket):
+    BucketName = "website-bucket-name-o1dc0de"
 
 
-
-
-
-"""
 class MyStack(Stack):
-    Description = "Cloudfront Stack for websites served by cfr and s3"
+    Description = "Minimal stack with a single S3 bucket."
     Resources = [S3Bucket]
     Parameters = {
         "WebsiteBucketName": {
@@ -57,12 +35,11 @@ class MyStack(Stack):
         "parameters": {},
         "tags": {},
     }
-"""
-
 
 
 if __name__ == "__main__":
     res = S3Bucket()
-    #stack = S3CfrStack()
-    #print(stack.yaml)
-    # stack.deploy()
+    stack = MyStack()
+    print(stack.yaml)
+    print("-" * 88)
+    print(stack.json)
