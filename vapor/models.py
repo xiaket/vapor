@@ -20,7 +20,7 @@ class ResourceBase(type):
         new_class = super_new(cls, name, bases, attrs)
         if "_module" in attrs:
             # We need to pass it down to the subclass
-            setattr(new_class, "__module__", attrs["_module"])
+            setattr(new_class, "__module__", attrs["_module"].__name__)
 
         return new_class
 
@@ -57,9 +57,7 @@ class Resource(metaclass=ResourceBase):
             if parent.__module__ == "vapor.models" and parent.__name__ == "Resource":
                 break
             base_class = parent
-        # pylint failed to detect this dynamic type.
-        # pylint: disable=E1101
-        return f"AWS::{base_class.__module__.__name__}::{base_class.__name__}"
+        return f"AWS::{base_class.__module__}::{base_class.__name__}"
 
     @property
     def template(self):
@@ -85,7 +83,7 @@ class Stack(metaclass=StackBase):
         """Internal python representation of a Cloudformation template."""
         if not hasattr(self, "Resources"):
             raise ValueError("Please define Resources in your stack.")
-        # Resources is defined in child stacks.
+        # Resources is defined in child classes.
         # pylint: disable=E1101
         tmplt = {
             "AWSTemplateFormatVersion": "2010-09-09",
