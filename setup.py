@@ -2,7 +2,7 @@
 from setuptools import setup, find_packages
 
 
-VERSION = "0.0.1"
+VERSION = "0.0.3"
 
 
 with open("README.md") as fobj:
@@ -21,7 +21,6 @@ if __name__ == "__main__":
         long_description_content_type="text/markdown",
         packages=find_packages(),
         py_modules=["vapor"],
-        entry_points={"console_scripts": ["vapor = vapor.__main__:main"]},
         classifiers=[
             "Development Status :: 4 - Beta",
             "Intended Audience :: Developers",
