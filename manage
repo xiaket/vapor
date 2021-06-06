@@ -33,7 +33,7 @@ tests () {
 }
 
 clean () {
-  rm -rf vapor.egg-info build dist coverage.xml
+  rm -rf vapor.egg-info build dist
 }
 
 lint () {
