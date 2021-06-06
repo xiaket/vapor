@@ -29,7 +29,7 @@ tests () {
   export AWS_SESSION_TOKEN='testing'
   init
   pip install -r requirements.test.txt
-  python -m pytest -sv --disable-warnings --cov=vapor tests/
+  python -m pytest -sv --disable-warnings --cov=vapor tests/ && coverage report -m && coveralls
 }
 
 clean () {
