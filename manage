@@ -29,7 +29,13 @@ tests () {
   export AWS_SESSION_TOKEN='testing'
   init
   pip install -r requirements.test.txt
-  python -m pytest -sv --disable-warnings --cov=vapor tests/ && coverage report -m && coveralls
+  python -m pytest -sv --disable-warnings --cov=vapor tests/
+  coverage report -m
+  # Github actions will setup CI
+  if [ "${CI:-}" = "true" ]
+  then
+    coveralls
+  fi
 }
 
 clean () {
