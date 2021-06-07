@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
+import os
 import unittest
 
 from vapor import S3, Stack
+
+
+os.environ["AWS_DEFAULT_REGION"] = "us-east-1"
 
 
 class TestResource(unittest.TestCase):

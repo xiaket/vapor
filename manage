@@ -27,6 +27,7 @@ tests () {
   export AWS_SECRET_ACCESS_KEY='testing'
   export AWS_SECURITY_TOKEN='testing'
   export AWS_SESSION_TOKEN='testing'
+  export AWS_DEFAULT_REGION='testing'
   init
   pip install -r requirements.test.txt
   python -m pytest -sv --disable-warnings --cov=vapor tests/
