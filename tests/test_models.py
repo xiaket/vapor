@@ -104,3 +104,60 @@ class TestResource(unittest.TestCase):
                 ],
             },
         )
+
+
+class TestStack(unittest.TestCase):
+    def setUp(self):
+        self.cls = type(
+            "Bucket",
+            (S3.Bucket,),
+            {
+                "BucketName": "test",
+                "VersionControlConfiguration": {"Status": "Enabled"},
+            },
+        )
+        self.stack = type(
+            "TestStack",
+            (Stack,),
+            {
+                "Resources": [self.cls],
+                "Description": "Minimal stack with a single S3 bucket.",
+            },
+        )()
+
+    def test_stack_template(self):
+        self.assertEqual(
+            self.stack.template,
+            {
+                "AWSTemplateFormatVersion": "2010-09-09",
+                "Resources": [
+                    {
+                        "Bucket": {
+                            "Properties": {
+                                "BucketName": "test",
+                                "VersionControlConfiguration": {"Status": "Enabled"},
+                            },
+                            "Type": "AWS::S3::Bucket",
+                        }
+                    }
+                ],
+            },
+        )
+        alt_stack = type("AnotherTestStack", (Stack,), {})()
+        with self.assertRaises(ValueError):
+            alt_stack.template
+
+    def test_stack_name(self):
+        self.assertEqual(self.stack.name, "test-stack")
+        alt_stack = type(
+            "AnotherTestStack",
+            (Stack,),
+            {"Resources": [self.cls]},
+        )()
+        self.assertEqual(alt_stack.name, "another-test-stack")
+        alt_stack = type(
+            "AnotherTestStack",
+            (Stack,),
+            {"Resources": [self.cls], "DeployOptions": {"name": "test"}},
+        )()
+        self.assertEqual(alt_stack.name, "test")

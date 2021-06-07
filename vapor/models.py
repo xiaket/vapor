@@ -2,7 +2,10 @@
 """Model definitions in vapor."""
 import json
 
+import boto3
 import yaml
+
+from .utils import format_name
 
 
 class ResourceBase(type):
@@ -78,6 +81,19 @@ class Resource(metaclass=ResourceBase):
 class Stack(metaclass=StackBase):
     """Represents a Cloudformation stack."""
 
+    def __init__(self):
+        self.client = boto3.client("cloudformation")
+
+    @property
+    def name(self):
+        """Name of the stack."""
+        return self.deploy_options.get("name", format_name(self.__class__.__name__))
+
+    @property
+    def deploy_options(self):
+        """Shortcut to DeployOptions dict provided in Subclasses."""
+        return getattr(self, "DeployOptions", {})
+
     @property
     def template(self):
         """Internal python representation of a Cloudformation template."""
@@ -113,3 +129,18 @@ class Stack(metaclass=StackBase):
     def yaml(self):
         """Return Cloudformaiton template in yaml format"""
         return yaml.dump(self.template)
+
+    def deploy(self):
+        """Wrapper around different steps in the stack deployment process."""
+        self.pre_deploy()
+        self.deploy_stack()
+        self.post_deploy()
+
+    def pre_deploy(self):
+        """Allowing the subclass to add additional steps before the deployment."""
+
+    def post_deploy(self):
+        """Allowing the subclass to add additional steps after the deployment."""
+
+    def deploy_stack(self):
+        """Deploy stack changes via changeset."""
