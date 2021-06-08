@@ -1,10 +1,7 @@
 TODOs:
 
-1. deploy command will create changeset and deploy the stack.
-2. cfn-lint and cfn-guard integration.
-
-wishlist:
-
-1. validate_template calls
-2. cfn-lint & cfn-guard
-3. confirm resource changes before deploy
+- use of pytest.
+- The api to alter deploy behavior.
+- deploy command will create changeset and deploy the stack.
+- validate template using cfn-lint/cfn-guard before deploy
+- cli to convert json/yml to python class. 
