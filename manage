@@ -30,7 +30,7 @@ tests () {
   export AWS_DEFAULT_REGION='testing'
   init
   pip install -r requirements.test.txt
-  python -m pytest -sv --disable-warnings --cov=vapor tests/
+  python -m pytest -sv -vv --cov=vapor tests/
   coverage report -m
   # Github actions will setup CI
   if [ "${CI:-}" = "true" ]
@@ -46,7 +46,7 @@ clean () {
 lint () {
   init
   pip install -r requirements.test.txt
-  pylint vapor
+  pylint vapor tests
 }
 
 list () {
