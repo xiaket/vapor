@@ -1,6 +1,5 @@
 TODOs:
 
-- use of pytest.
 - The api to alter deploy behavior.
 - deploy command will create changeset and deploy the stack.
 - validate template using cfn-lint/cfn-guard before deploy
