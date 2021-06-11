@@ -1,6 +1,7 @@
 TODOs:
 
-- The api to alter deploy behavior.
-- deploy command will create changeset and deploy the stack.
+- deploy method that will create changeset and deploy the stack.
+- make cfn parameters work
+- make cfn functions work
 - validate template using cfn-lint/cfn-guard before deploy
 - cli to convert json/yml to python class. 
