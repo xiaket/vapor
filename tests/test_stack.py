@@ -6,7 +6,9 @@ We will test stack attrs and cfn apis.
 """
 import os
 
+import boto3
 import pytest
+from moto import mock_cloudformation
 
 # vapor generates modules on demand.
 # pylint: disable=E0611
@@ -27,6 +29,7 @@ class Bucket(S3.Bucket):
 
 class S3Stack(Stack):
     """Test stack"""
+
     Resources = [Bucket]
     Description = "Minimal stack with a single S3 bucket."
 
@@ -56,12 +59,41 @@ def test_stack_template():
     stack = S3Stack()
     assert stack.template == {
         "AWSTemplateFormatVersion": "2010-09-09",
-        "Resources": [
-            Bucket().template
-        ],
+        "Resources": {"Bucket": Bucket().template},
     }
 
     # Resources cannot be empty.
     alt_stack = type("AnotherTestStack", (Stack,), {})()
     with pytest.raises(ValueError):
         print(alt_stack.template)
+
+
+@mock_cloudformation
+def test_stack_status():
+    """Test stack name that comes from class name."""
+    cfn = boto3.client("cloudformation")
+    stack = S3Stack()
+    assert stack.exists == False
+
+    cfn.create_stack(
+        StackName=stack.name,
+        TemplateBody=stack.json,
+    )
+
+    assert stack.status == "CREATE_COMPLETE"
+    assert stack.exists == True
+
+    class NewBucket(Bucket):
+        BucketName = "new-bucket-in-test"
+
+    stack.Resources = [Bucket, NewBucket]
+    cfn.update_stack(
+        StackName=stack.name,
+        TemplateBody=stack.json,
+    )
+
+    assert stack.status == "UPDATE_COMPLETE"
+    assert stack.exists == True
+
+    cfn.delete_stack(StackName=stack.name)
+    assert stack.exists == False

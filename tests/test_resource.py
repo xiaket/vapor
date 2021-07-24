@@ -32,13 +32,11 @@ def test_resource_attrs():
         "VersionControlConfiguration": {"Status": "Enabled"},
     }
     assert resource.template == {
-        "Bucket": {
-            "Properties": {
-                "BucketName": "test",
-                "VersionControlConfiguration": {"Status": "Enabled"},
-            },
-            "Type": "AWS::S3::Bucket",
-        }
+        "Properties": {
+            "BucketName": "test",
+            "VersionControlConfiguration": {"Status": "Enabled"},
+        },
+        "Type": "AWS::S3::Bucket",
     }
 
 
@@ -62,11 +60,9 @@ def test_resurce_inheritance():
         "VersionControlConfiguration": {"Status": "Enabled"},
     }
     assert resource.template == {
-        "S3Bucket": {
-            "Properties": {
-                "BucketName": "test-again",
-                "VersionControlConfiguration": {"Status": "Enabled"},
-            },
-            "Type": "AWS::S3::Bucket",
-        }
+        "Properties": {
+            "BucketName": "test-again",
+            "VersionControlConfiguration": {"Status": "Enabled"},
+        },
+        "Type": "AWS::S3::Bucket",
     }

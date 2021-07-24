@@ -4,8 +4,12 @@ import json
 
 import boto3
 import yaml
+from botocore.exceptions import ClientError
 
-from .utils import format_name
+from .utils import format_name, get_logger
+
+
+logger = get_logger(__name__)
 
 
 class ResourceBase(type):
@@ -66,10 +70,8 @@ class Resource(metaclass=ResourceBase):
     def template(self):
         """Return the template fragment of the resource."""
         return {
-            self.logical_name: {
-                "Type": self.resource_type,
-                "Properties": self.properties,
-            }
+            "Type": self.resource_type,
+            "Properties": self.properties,
         }
 
     @property
@@ -103,7 +105,7 @@ class Stack(metaclass=StackBase):
         # pylint: disable=E1101
         tmplt = {
             "AWSTemplateFormatVersion": "2010-09-09",
-            "Resources": [resource().template for resource in self.Resources],
+            "Resources": {kls().logical_name: kls().template for kls in self.Resources},
         }
         optionals = [
             "Conditions",
@@ -130,17 +132,24 @@ class Stack(metaclass=StackBase):
         """Return Cloudformaiton template in yaml format"""
         return yaml.dump(self.template)
 
-    def deploy(self):
-        """Wrapper around different steps in the stack deployment process."""
-        self.pre_deploy()
-        self.deploy_stack()
-        self.post_deploy()
+    @property
+    def describe_stack_response(self):
+        """Return the response from descibe-stacks call."""
+        try:
+            return self.client.describe_stacks(StackName=self.name)["Stacks"][0]
+        except ClientError as error:
+            code = error.response["Error"]["Code"]
+            message = error.response["Error"]["Message"]
+            if code == "ValidationError" and message.endswith("does not exist"):
+                return {"StackStatus": "DOES_NOT_EXIST"}
+            raise
 
-    def pre_deploy(self):
-        """Allowing the subclass to add additional steps before the deployment."""
+    @property
+    def status(self):
+        """Return the status of the stack as a string."""
+        return self.describe_stack_response["StackStatus"]
 
-    def post_deploy(self):
-        """Allowing the subclass to add additional steps after the deployment."""
-
-    def deploy_stack(self):
-        """Deploy stack changes via changeset."""
+    @property
+    def exists(self):
+        """Check whether this stack exists."""
+        return self.status != "DOES_NOT_EXIST"
