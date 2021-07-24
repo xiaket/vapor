@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Model definitions in vapor."""
 import json
+from datetime import datetime
 
 import boto3
 import yaml
@@ -153,3 +154,55 @@ class Stack(metaclass=StackBase):
     def exists(self):
         """Check whether this stack exists."""
         return self.status != "DOES_NOT_EXIST"
+
+    def deploy(self, dryrun=True, wait=True):
+        """Wrapper around different steps in the stack deployment process."""
+        self.pre_deploy(dryrun, wait)
+        self.__deploy(dryrun, wait)
+        self.post_deploy(dryrun, wait)
+
+    def __deploy(self, dryrun, wait):
+        """Deploy stack changes via changeset."""
+
+    def delete(self, dryrun=True, wait=True):
+        """Wrapper around different steps in the stack deletion process."""
+        self.__delete(dryrun, wait)
+
+    def post_deploy(self, dryrun, wait):
+        """Allowing the subclass to add additional steps after the deletion."""
+        logger.info(f"Nothing to be done in post-delete hook. {dryrun=}, {wait=}.")
+
+    def __delete(self, dryrun, wait):
+        """Delete stack."""
+
+    def pre_deploy(self, dryrun, wait):
+        """Allowing the subclass to add additional steps before the deployment."""
+        if self.status == "ROLLBACK_COMPLETE":
+            logger.info(f"Deleting stack in ROLLBACK_COMPLETE state.")
+            if not dryrun:
+                self.delete(dryrun, wait)
+
+    def __create_changeset(self):
+        """Create a changeset."""
+        name = f"{datetime.now().strftime('%F-%H-%M-%S')}"
+        parameters = [
+            {"ParameterKey": param, "ParameterValue": self.params[param]}
+            for param in self.deploy_options.get("parameters", {})
+        ]
+        tags = [
+            {"Key": tag, "Value": value}
+            for tag, value in self.deploy_options.get("tags", {}).items()
+        ]
+        kwargs = {
+            "StackName": self.name,
+            "Parameters": parameters,
+            "Tags": tags,
+            "ChangeSetName": name,
+            "ChangeSetType": "UPDATE" if self.exists else "CREATE",
+            "Capabilities": self.deploy_options.get("Capabilities", []),
+            "TemplateBody": self.yaml,
+        }
+
+        logger.info(f"Creating changeset {name}.")
+        self.client.create_change_set(**kwargs)
+        return kwargs["ChangeSetType"] == "CREATE", name

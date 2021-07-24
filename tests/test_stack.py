@@ -70,7 +70,7 @@ def test_stack_template():
 
 @mock_cloudformation
 def test_stack_status():
-    """Test stack name that comes from class name."""
+    """Test stack status that comes from boto calls."""
     cfn = boto3.client("cloudformation")
     stack = S3Stack()
     assert stack.exists == False
@@ -97,3 +97,13 @@ def test_stack_status():
 
     cfn.delete_stack(StackName=stack.name)
     assert stack.exists == False
+
+
+@mock_cloudformation
+def test_stack_create_changeset():
+    """Test stack parameters."""
+    cfn = boto3.client("cloudformation")
+    stack = S3Stack()
+
+    create_stack, name = stack._Stack__create_changeset()
+    assert create_stack is True
