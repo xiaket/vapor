@@ -26,6 +26,8 @@ class Bucket(S3.Bucket):
     BucketName = "test"
     VersionControlConfiguration = {"Status": "Enabled"}
 
+class NewBucket(Bucket):
+    BucketName = "new-bucket-in-test"
 
 class S3Stack(Stack):
     """Test stack"""
@@ -83,9 +85,6 @@ def test_stack_status():
     assert stack.status == "CREATE_COMPLETE"
     assert stack.exists == True
 
-    class NewBucket(Bucket):
-        BucketName = "new-bucket-in-test"
-
     stack.Resources = [Bucket, NewBucket]
     cfn.update_stack(
         StackName=stack.name,
@@ -100,10 +99,40 @@ def test_stack_status():
 
 
 @mock_cloudformation
-def test_stack_create_changeset():
+def test_stack_create_changeset(capsys):
     """Test stack parameters."""
     cfn = boto3.client("cloudformation")
     stack = S3Stack()
 
     create_stack, name = stack._Stack__create_changeset()
     assert create_stack is True
+    response = cfn.describe_change_set(ChangeSetName=name, StackName=stack.name)
+
+    assert response["Status"] == "CREATE_COMPLETE"
+    assert len(response["Changes"]) == 1
+    change = response["Changes"][0]["ResourceChange"]
+    assert change["Action"] == "Add"
+    assert change["LogicalResourceId"] == "Bucket"
+
+    # Test modify attribute
+    Bucket.VersionControlConfiguration = {"Status": "Disabled"}
+    stack.Resources = [Bucket]
+    create_stack, name = stack._Stack__create_changeset()
+    assert create_stack is False
+    response = cfn.describe_change_set(ChangeSetName=name, StackName=stack.name)
+    assert response["Status"] == "CREATE_COMPLETE"
+    assert len(response["Changes"]) == 1
+    change = response["Changes"][0]["ResourceChange"]
+    assert change["Action"] == "Modify"
+    assert change["LogicalResourceId"] == "Bucket"
+
+    # Test update.
+    stack.Resources = [Bucket, NewBucket]
+    create_stack, name = stack._Stack__create_changeset()
+    assert create_stack is False
+    response = cfn.describe_change_set(ChangeSetName=name, StackName=stack.name)
+    assert response["Status"] == "CREATE_COMPLETE"
+    assert len(response["Changes"]) == 1
+    change = response["Changes"][0]["ResourceChange"]
+    assert change["Action"] == "Add"
+    assert change["LogicalResourceId"] == "NewBucket"
