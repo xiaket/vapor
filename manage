@@ -10,27 +10,13 @@ then
   source .env
 fi
 
-# define tasks here
-init (){
-  if [ ! -d venv ]
-  then
-    python -m venv venv
-    source venv/bin/activate
-    pip install -U pip
-    pip install -r requirements.txt
-  fi
-  source venv/bin/activate
-}
-
 tests () {
   export AWS_ACCESS_KEY_ID='testing'
   export AWS_SECRET_ACCESS_KEY='testing'
   export AWS_SECURITY_TOKEN='testing'
   export AWS_SESSION_TOKEN='testing'
   export AWS_DEFAULT_REGION='testing'
-  init
-  pip install -r requirements.test.txt
-  python -m pytest -sv -vv --cov=vapor tests/
+  poetry run pytest -sv -vv --cov=vapor tests/
   coverage report -m
   # Github actions will setup CI
   if [ "${CI:-}" = "true" ]
@@ -39,14 +25,12 @@ tests () {
   fi
 }
 
-clean () {
-  rm -rf vapor.egg-info build dist
+lint () {
+  poetry run pylint vapor tests
 }
 
-lint () {
-  init
-  pip install -r requirements.test.txt
-  pylint vapor tests
+clean () {
+  rm -rf vapor.egg-info build dist
 }
 
 list () {

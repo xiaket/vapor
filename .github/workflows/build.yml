@@ -36,11 +36,11 @@ jobs:
         with:
           python-version: 3.9
       - name: Install dependencies
-        run: pip install setuptools wheel twine
+        run: pip install poetry
       - name: Build
-        run: python setup.py sdist bdist_wheel
+        run: poetry build
       - name: Publish to pypi
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.pypi_token_vapor }}
-        run: twine upload dist/*
+        run: poetry --build publish
