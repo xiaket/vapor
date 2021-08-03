@@ -24,7 +24,8 @@ pytest = "^6.2.4"
 pytest-cov = "^2.12.1"
 pylint = "^2.9.6"
 coveralls = "^3.2.0"
-"moto[cloudformation]" = "^2.2.1"
+moto = { version = "^2.2.1", extras = ["cloudformation"]}
+
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
