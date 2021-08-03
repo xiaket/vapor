@@ -11,6 +11,7 @@ from vapor import S3
 
 class Bucket(S3.Bucket):
     """Test S3 resource"""
+
     # This is our DSL, user don't have to define methods.
     # pylint: disable=R0903
     BucketName = "test"

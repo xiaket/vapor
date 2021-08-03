@@ -29,3 +29,8 @@ coveralls = "^3.2.0"
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.pylint."MESSAGES CONTROL"]
+disable = [
+    "logging-fstring-interpolation",
+]

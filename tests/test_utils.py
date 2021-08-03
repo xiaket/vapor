@@ -16,6 +16,7 @@ def test_format_name():
 
 
 def test_color_logger(caplog, capsys):
+    """test the colorful logger function."""
     logger_name = "unit"
     logger = get_logger(logger_name)
 
@@ -34,15 +35,16 @@ def test_color_logger(caplog, capsys):
 
 
 def test_format_changes():
+    """test format_changes function."""
     change1 = {
         "ResourceChange": {
             "ResourceType": "AWS::EC2::Instance",
             "PhysicalResourceId": "i-1abc23d4",
             "Action": "Create",
             "LogicalResourceId": "MyEC2Instance",
-            "Replacement": "False"
+            "Replacement": "False",
         },
-        "Type": "Resource"
+        "Type": "Resource",
     }
     line1 = "[CREATE] MyEC2Instance(AWS::EC2::Instance)"
     formatted = format_changes([change1])
@@ -54,9 +56,9 @@ def test_format_changes():
             "PhysicalResourceId": "i-1abc23d4",
             "Action": "Modify",
             "LogicalResourceId": "EC2",
-            "Replacement": "False"
+            "Replacement": "False",
         },
-        "Type": "Resource"
+        "Type": "Resource",
     }
     line2 = "[MODIFY] EC2(AWS::EC2::Instance)"
     formatted = format_changes([change1, change2])

@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """Model definitions in vapor."""
 import json
+import time
 from datetime import datetime
 
 import boto3
 import yaml
 from botocore.exceptions import ClientError
 
-from .utils import format_name, get_logger
+from .utils import format_name, get_logger, format_changes
 
 
 logger = get_logger(__name__)
@@ -163,6 +164,28 @@ class Stack(metaclass=StackBase):
 
     def __deploy(self, dryrun, wait):
         """Deploy stack changes via changeset."""
+        create, name = self.__create_changeset()
+        action = "Creating" if create else "Updating"
+        logger.info(f"{action} {self.name} stack.")
+
+        changes = self.__wait_changeset(name)
+        if changes == []:
+            logger.info(f"No change in {self.name} stack.")
+            return
+
+        logger.info(f"Changes in changeset `{name}`: \n{format_changes(changes)}")
+
+        if not dryrun:
+            logger.info(f"Executing changeset `{name}`.")
+            self.client.execute_change_set(ChangeSetName=name, StackName=self.name)
+            if wait and not dryrun:
+                self.__wait_stack()
+        else:
+            self.client.delete_change_set(ChangeSetName=name, StackName=self.name)
+            if create:
+                # An empty stack will stay there until we delete it.
+                self.client.delete_stack(StackName=self.name)
+            logger.info("Skipping deployment as this is a dry run.")
 
     def delete(self, dryrun=True, wait=True):
         """Wrapper around different steps in the stack deletion process."""
@@ -170,6 +193,8 @@ class Stack(metaclass=StackBase):
 
     def post_deploy(self, dryrun, wait):
         """Allowing the subclass to add additional steps after the deletion."""
+        # this is a hook, user can potentially use `self` in a subclass.
+        # pylint: disable=R0201
         logger.info(f"Nothing to be done in post-delete hook. {dryrun=}, {wait=}.")
 
     def __delete(self, dryrun, wait):
@@ -178,7 +203,7 @@ class Stack(metaclass=StackBase):
     def pre_deploy(self, dryrun, wait):
         """Allowing the subclass to add additional steps before the deployment."""
         if self.status == "ROLLBACK_COMPLETE":
-            logger.info(f"Deleting stack in ROLLBACK_COMPLETE state.")
+            logger.info("Deleting stack in ROLLBACK_COMPLETE state.")
             if not dryrun:
                 self.delete(dryrun, wait)
 
@@ -186,8 +211,8 @@ class Stack(metaclass=StackBase):
         """Create a changeset."""
         name = f"{datetime.now().strftime('%F-%H-%M-%S')}"
         parameters = [
-            {"ParameterKey": param, "ParameterValue": self.params[param]}
-            for param in self.deploy_options.get("parameters", {})
+            {"ParameterKey": key, "ParameterValue": value}
+            for key, value in self.deploy_options.get("parameters", {}).items()
         ]
         tags = [
             {"Key": tag, "Value": value}
@@ -206,3 +231,71 @@ class Stack(metaclass=StackBase):
         logger.info(f"Creating changeset {name}.")
         self.client.create_change_set(**kwargs)
         return kwargs["ChangeSetType"] == "CREATE", name
+
+    def __wait_changeset(self, name):
+        """Wait till a changeset is available and return it's changes."""
+        kwargs = {"ChangeSetName": name, "StackName": self.name}
+
+        while True:
+            response = self.client.describe_change_set(**kwargs)
+            status = response["Status"]
+            exec_status = response["ExecutionStatus"]
+
+            if status == "FAILED":
+                empty_changeset_reasons = [
+                    "didn't contain changes",
+                    "No updates are to be performed.",
+                ]
+                for reason in empty_changeset_reasons:
+                    if reason in response["StatusReason"]:
+                        return []
+                raise RuntimeError(
+                    f"Failed to create changeset for {self.name}: {response['StatusReason']}"
+                )
+
+            if status == "CREATE_COMPLETE" and exec_status == "AVAILABLE":
+                if not response.get("NextToken"):
+                    # Don't have lot's of changes, no need for another api call.
+                    return response["Changes"]
+                changes = response["Changes"]
+                # setting NextToken in kwargs.
+                kwargs["NextToken"] = response["NextToken"]
+                break
+            logger.info(
+                f"Status of changeset is `{status}`, execution status is `{exec_status}`"
+            )
+            # Change set should be ready within seconds.
+            time.sleep(3)
+
+        while True:
+            response = self.client.describe_change_set(**kwargs)
+            changes += response["Changes"]
+            if not response.get("NextToken"):
+                break
+            kwargs["NextToken"] = response["NextToken"]
+        return changes
+
+    def __wait_stack(self):
+        while True:
+            try:
+                response = self.client.describe_stacks(StackName=self.name)
+            except ClientError as error:
+                code = error.response["Error"]["Code"]
+                message = error.response["Error"]["Message"]
+                if code == "ValidationError" and message.endswith("does not exist"):
+                    break
+                raise
+            status = response["Stacks"][0]["StackStatus"]
+            if status.endswith("FAILED") or status.endswith("COMPLETE"):
+                break
+            logger.info(f"Waiting till stack operation completes: {status}.")
+            time.sleep(5)
+
+        logger.info(f"Stack operation finished: {status}")
+        bad_statuses = [
+            "UPDATE_ROLLBACK_COMPLETE",
+            "ROLLBACK_COMPLETE",
+            "DELETE_COMPLETE",
+        ]
+        if status in bad_statuses:
+            raise RuntimeError("Failed to create/update stack.")

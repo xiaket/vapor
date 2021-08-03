@@ -19,15 +19,21 @@ os.environ["AWS_DEFAULT_REGION"] = "us-east-1"
 
 
 class Bucket(S3.Bucket):
-    """Test S3 resource"""
+    """test S3 resource"""
 
     # This is our DSL, user don't have to define methods.
     # pylint: disable=R0903
     BucketName = "test"
     VersionControlConfiguration = {"Status": "Enabled"}
 
+
 class NewBucket(Bucket):
+    """test S3 resource."""
+
+    # This is our DSL, user don't have to define methods.
+    # pylint: disable=R0903
     BucketName = "new-bucket-in-test"
+
 
 class S3Stack(Stack):
     """Test stack"""
@@ -75,7 +81,7 @@ def test_stack_status():
     """Test stack status that comes from boto calls."""
     cfn = boto3.client("cloudformation")
     stack = S3Stack()
-    assert stack.exists == False
+    assert stack.exists is False
 
     cfn.create_stack(
         StackName=stack.name,
@@ -83,8 +89,10 @@ def test_stack_status():
     )
 
     assert stack.status == "CREATE_COMPLETE"
-    assert stack.exists == True
+    assert stack.exists is True
 
+    # This naming convention maps to cloudformation template elements.
+    # pylint: disable=C0103
     stack.Resources = [Bucket, NewBucket]
     cfn.update_stack(
         StackName=stack.name,
@@ -92,10 +100,10 @@ def test_stack_status():
     )
 
     assert stack.status == "UPDATE_COMPLETE"
-    assert stack.exists == True
+    assert stack.exists is True
 
     cfn.delete_stack(StackName=stack.name)
-    assert stack.exists == False
+    assert stack.exists is False
 
 
 @mock_cloudformation
@@ -104,6 +112,8 @@ def test_stack_create_changeset():
     cfn = boto3.client("cloudformation")
     stack = S3Stack()
 
+    # testing this private method.
+    # pylint: disable=E1101,W0212
     create_stack, name = stack._Stack__create_changeset()
     assert create_stack is True
     response = cfn.describe_change_set(ChangeSetName=name, StackName=stack.name)
@@ -117,6 +127,8 @@ def test_stack_create_changeset():
     # Test modify attribute
     Bucket.VersionControlConfiguration = {"Status": "Disabled"}
     stack.Resources = [Bucket]
+    # testing this private method.
+    # pylint: disable=E1101,W0212
     create_stack, name = stack._Stack__create_changeset()
     assert create_stack is False
     response = cfn.describe_change_set(ChangeSetName=name, StackName=stack.name)
@@ -128,6 +140,8 @@ def test_stack_create_changeset():
 
     # Test update.
     stack.Resources = [Bucket, NewBucket]
+    # testing this private method.
+    # pylint: disable=E1101,W0212
     create_stack, name = stack._Stack__create_changeset()
     assert create_stack is False
     response = cfn.describe_change_set(ChangeSetName=name, StackName=stack.name)
@@ -136,6 +150,7 @@ def test_stack_create_changeset():
     change = response["Changes"][0]["ResourceChange"]
     assert change["Action"] == "Add"
     assert change["LogicalResourceId"] == "NewBucket"
+
 
 @mock_cloudformation
 def test_stack_create_empty_changeset():
@@ -149,8 +164,10 @@ def test_stack_create_empty_changeset():
     )
 
     assert stack.status == "CREATE_COMPLETE"
-    assert stack.exists == True
+    assert stack.exists is True
 
+    # testing this private method.
+    # pylint: disable=E1101,W0212
     create_stack, name = stack._Stack__create_changeset()
     assert create_stack is False
     response = cfn.describe_change_set(ChangeSetName=name, StackName=stack.name)
