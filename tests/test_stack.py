@@ -99,7 +99,7 @@ def test_stack_status():
 
 
 @mock_cloudformation
-def test_stack_create_changeset(capsys):
+def test_stack_create_changeset():
     """Test stack parameters."""
     cfn = boto3.client("cloudformation")
     stack = S3Stack()
@@ -136,3 +136,23 @@ def test_stack_create_changeset(capsys):
     change = response["Changes"][0]["ResourceChange"]
     assert change["Action"] == "Add"
     assert change["LogicalResourceId"] == "NewBucket"
+
+@mock_cloudformation
+def test_stack_create_empty_changeset():
+    """Test stack parameters."""
+    cfn = boto3.client("cloudformation")
+    stack = S3Stack()
+
+    cfn.create_stack(
+        StackName=stack.name,
+        TemplateBody=stack.json,
+    )
+
+    assert stack.status == "CREATE_COMPLETE"
+    assert stack.exists == True
+
+    create_stack, name = stack._Stack__create_changeset()
+    assert create_stack is False
+    response = cfn.describe_change_set(ChangeSetName=name, StackName=stack.name)
+    assert response["Status"] == "CREATE_COMPLETE"
+    assert response.get("Changes", []) == []
