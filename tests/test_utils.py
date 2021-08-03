@@ -4,7 +4,7 @@ Testing helpers in utils.py
 """
 import logging
 
-from vapor.utils import format_name, get_logger, ColorFormatter
+from vapor.utils import format_changes, format_name, get_logger, ColorFormatter
 
 
 def test_format_name():
@@ -31,3 +31,33 @@ def test_color_logger(caplog, capsys):
         assert records[i] == (logger_name, logging_level, level)
         expected_color = ColorFormatter.FORMATS[logging_level][:8]
         assert lines[i].startswith(expected_color)
+
+
+def test_format_changes():
+    change1 = {
+        "ResourceChange": {
+            "ResourceType": "AWS::EC2::Instance",
+            "PhysicalResourceId": "i-1abc23d4",
+            "Action": "Create",
+            "LogicalResourceId": "MyEC2Instance",
+            "Replacement": "False"
+        },
+        "Type": "Resource"
+    }
+    line1 = "[CREATE] MyEC2Instance(AWS::EC2::Instance)"
+    formatted = format_changes([change1])
+    assert formatted == line1
+
+    change2 = {
+        "ResourceChange": {
+            "ResourceType": "AWS::EC2::Instance",
+            "PhysicalResourceId": "i-1abc23d4",
+            "Action": "Modify",
+            "LogicalResourceId": "EC2",
+            "Replacement": "False"
+        },
+        "Type": "Resource"
+    }
+    line2 = "[MODIFY] EC2(AWS::EC2::Instance)"
+    formatted = format_changes([change1, change2])
+    assert formatted == "\n".join([line1, line2])

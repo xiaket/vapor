@@ -56,3 +56,24 @@ def get_logger(name):
     handler.setFormatter(ColorFormatter())
     logger.addHandler(handler)
     return logger
+
+
+def format_changes(changes):
+    """
+    Format changes so it will look better.
+
+    ref on changeset:
+
+    https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-updating-stacks-changesets-view.html
+    """
+    parts = []
+    for change in changes:
+        change_ = change["ResourceChange"]
+        line = (
+            f"[{change_['Action'].upper()}] "
+            f"{change_['LogicalResourceId']}({change_['ResourceType']})"
+        )
+        if "Details" in change_ and change_["Details"]:
+            line += f":\n\t{change_['Details']}"
+        parts.append(line)
+    return "\n".join(parts)
