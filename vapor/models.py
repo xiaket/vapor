@@ -256,8 +256,8 @@ class Stack(metaclass=StackBase):
             if status == "CREATE_COMPLETE" and exec_status == "AVAILABLE":
                 if not response.get("NextToken"):
                     # Don't have lot's of changes, no need for another api call.
-                    return response["Changes"]
-                changes = response["Changes"]
+                    return response.get("Changes", [])
+                changes = response.get("Changes", [])
                 # setting NextToken in kwargs.
                 kwargs["NextToken"] = response["NextToken"]
                 break

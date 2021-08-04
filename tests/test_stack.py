@@ -173,3 +173,29 @@ def test_stack_create_empty_changeset():
     response = cfn.describe_change_set(ChangeSetName=name, StackName=stack.name)
     assert response["Status"] == "CREATE_COMPLETE"
     assert response.get("Changes", []) == []
+
+
+@mock_cloudformation
+def test_stack_wait_changeset():
+    """Test stack parameters."""
+    cfn = boto3.client("cloudformation")
+    stack = S3Stack()
+
+    # testing this private method.
+    # pylint: disable=E1101,W0212
+    create_stack, name = stack._Stack__create_changeset()
+    assert create_stack is True
+
+    # testing this private method.
+    # pylint: disable=E1101,W0212
+    changes = stack._Stack__wait_changeset(name)
+    assert changes == [{'ResourceChange': {'Action': 'Add',
+        'LogicalResourceId': 'Bucket',
+        'ResourceType': 'AWS::S3::Bucket'},
+        'Type': 'Resource'
+    }]
+
+    # mote does not return empty changeset as Cloudformation does.
+    create_stack, name = stack._Stack__create_changeset()
+    changes = stack._Stack__wait_changeset(name)
+    assert changes == []
