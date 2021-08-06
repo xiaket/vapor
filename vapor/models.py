@@ -132,7 +132,12 @@ class Stack(metaclass=StackBase):
     @property
     def yaml(self):
         """Return Cloudformaiton template in yaml format"""
-        return yaml.dump(self.template)
+        # Disable anchor in yaml
+
+        # pyyaml will try to be smart and add an anchor to the generated yaml file.
+        # This "feature" is not desirable.
+        yaml.Dumper.ignore_aliases = lambda self, data: True
+        return yaml.dump(self.template, Dumper=yaml.Dumper)
 
     @property
     def describe_stack_response(self):
