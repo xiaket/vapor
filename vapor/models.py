@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Model definitions in vapor."""
 import json
+import random
 import time
 from datetime import datetime
 
@@ -214,7 +215,8 @@ class Stack(metaclass=StackBase):
 
     def __create_changeset(self):
         """Create a changeset."""
-        name = f"{datetime.now().strftime('%F-%H-%M-%S')}"
+        suffix = random.randbytes(4).hex()
+        name = f"{datetime.now().strftime('%F-%H-%M-%S')}-{suffix}"
         parameters = [
             {"ParameterKey": key, "ParameterValue": value}
             for key, value in self.deploy_options.get("parameters", {}).items()
