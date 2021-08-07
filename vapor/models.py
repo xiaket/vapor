@@ -276,7 +276,7 @@ class Stack(metaclass=StackBase):
 
         while True:
             response = self.client.describe_change_set(**kwargs)
-            changes += response["Changes"]
+            changes += response.get("Changes", [])
             if not response.get("NextToken"):
                 break
             kwargs["NextToken"] = response["NextToken"]
@@ -284,25 +284,17 @@ class Stack(metaclass=StackBase):
 
     def __wait_stack(self):
         while True:
-            try:
-                response = self.client.describe_stacks(StackName=self.name)
-            except ClientError as error:
-                code = error.response["Error"]["Code"]
-                message = error.response["Error"]["Message"]
-                if code == "ValidationError" and message.endswith("does not exist"):
-                    break
-                raise
-            status = response["Stacks"][0]["StackStatus"]
-            if status.endswith("FAILED") or status.endswith("COMPLETE"):
+            current_status = self.status
+            if current_status.endswith("FAILED") or current_status.endswith("COMPLETE"):
                 break
-            logger.info(f"Waiting till stack operation completes: {status}.")
+            logger.info(f"Waiting till stack operation completes: {current_status}.")
             time.sleep(5)
 
-        logger.info(f"Stack operation finished: {status}")
+        logger.info(f"Stack operation finished: {current_status}")
         bad_statuses = [
             "UPDATE_ROLLBACK_COMPLETE",
             "ROLLBACK_COMPLETE",
             "DELETE_COMPLETE",
         ]
-        if status in bad_statuses:
+        if current_status in bad_statuses:
             raise RuntimeError("Failed to create/update stack.")
