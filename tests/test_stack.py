@@ -350,8 +350,8 @@ def test_stack_deploy():
     stack.deploy(dryrun=False, wait=True)
     assert stack.status == "CREATE_COMPLETE"
 
-    s3 = boto3.client("s3")
-    buckets = s3.list_buckets()["Buckets"]
+    s3_cli = boto3.client("s3")
+    buckets = s3_cli.list_buckets()["Buckets"]
     assert len(buckets) == 1
     assert buckets[0]["Name"] == Bucket.BucketName
 
@@ -386,18 +386,18 @@ def test_stack_delete():
     stack = S3Stack()
     cfn.create_stack(StackName=stack.name, TemplateBody=stack.json)
 
-    s3 = boto3.client("s3")
-    buckets = s3.list_buckets()["Buckets"]
+    s3_cli = boto3.client("s3")
+    buckets = s3_cli.list_buckets()["Buckets"]
     assert len(buckets) == 1
     assert buckets[0]["Name"] == Bucket.BucketName
 
     stack.delete(dryrun=True, wait=True)
-    buckets = s3.list_buckets()["Buckets"]
+    buckets = s3_cli.list_buckets()["Buckets"]
     assert len(buckets) == 1
 
     stack.delete(dryrun=False, wait=True)
     assert stack.status == "DOES_NOT_EXIST"
-    buckets = s3.list_buckets()["Buckets"]
+    buckets = s3_cli.list_buckets()["Buckets"]
     assert len(buckets) == 0
 
 
@@ -428,4 +428,6 @@ def test_stack_dunder_delete():
     cfn.create_stack(StackName=stack.name, TemplateBody=stack.json)
     assert stack.status == "CREATE_COMPLETE"
 
+    # testing this private method.
+    # pylint: disable=E1101,W0212
     stack._Stack__delete(dryrun=False, wait=False)
