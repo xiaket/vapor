@@ -2,6 +2,7 @@
 """Model definitions in vapor."""
 import json
 import random
+import re
 import time
 from datetime import datetime
 
@@ -10,10 +11,46 @@ import yaml
 from botocore.exceptions import ClientError
 
 from .models import StackBase
-from .utils import format_name, get_logger, format_changes
+from .utils import get_logger
 
 
 logger = get_logger(__name__)
+
+
+def format_name(name):
+    """
+    Generate a stack name from class name by converting camel case to dash case.
+    Adapted from https://stackoverflow.com/questions/1175208/.
+
+    This function is our best effort to provide a good stack name in Cloudformation.
+    However, if you want to have fine-grained control, please specify the name field in
+    DeployOptions in your Stack class.
+
+    example: format_name("TestStack") == "test-stack"
+    """
+    name = re.sub("(.)([A-Z][a-z]+)", r"\1-\2", name)
+    return re.sub("([a-z0-9])([A-Z])", r"\1-\2", name).lower()
+
+
+def format_changes(changes):
+    """
+    Format changes so it will look better.
+
+    ref on changeset:
+
+    https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-updating-stacks-changesets-view.html
+    """
+    parts = []
+    for change in changes:
+        change_ = change["ResourceChange"]
+        line = (
+            f"[{change_['Action'].upper()}] "
+            f"{change_['LogicalResourceId']}({change_['ResourceType']})"
+        )
+        if "Details" in change_ and change_["Details"]:
+            line += f":\n\t{change_['Details']}"
+        parts.append(line)
+    return "\n".join(parts)
 
 
 class Stack(metaclass=StackBase):

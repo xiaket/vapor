@@ -4,7 +4,8 @@ Testing helpers in utils.py
 """
 import logging
 
-from vapor.utils import format_changes, format_name, get_logger, ColorFormatter
+from vapor.utils import get_logger, ColorFormatter
+from vapor.stack import format_changes, format_name
 
 
 def test_format_name():

@@ -158,7 +158,7 @@ def test_stack_create_changeset_complex_update():
     """Test create_change_set call with modification and addition."""
     cfn = boto3.client("cloudformation")
     stack = S3Stack()
-    stack._Stack__deploy(dryrun=False, wait=True)
+    cfn.create_stack(StackName=stack.name, TemplateBody=stack.json)
 
     # Change existing bucket while adding a new one
     Bucket.BucketName = "change-of-name"
