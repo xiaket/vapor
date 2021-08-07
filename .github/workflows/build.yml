@@ -7,16 +7,22 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.7, 3.8, 3.9]
+        python-version: [3.8, 3.9]
     steps:
       - name: Checkout
         uses: actions/checkout@v2
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v1
+        uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Black
-        uses: lgeiger/black-action@master
+      - name: Install poetry
+        uses: abatilo/actions-poetry@v2.0.0
+        with:
+          poetry-version: 1.1.7
+      - name: set venv
+        run: poetry env use python${{ matrix.python-version }}
+      - name: install packages
+        run: poetry install
       - name: Pylint
         run: ./manage lint
       - name: Test
@@ -32,15 +38,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
       - name: Set up Python
-        uses: actions/setup-python@v1
+        uses: actions/setup-python@v2
         with:
           python-version: 3.9
       - name: Install dependencies
-        run: pip install setuptools wheel twine
+        run: pip install poetry
       - name: Build
-        run: python setup.py sdist bdist_wheel
+        run: poetry build
       - name: Publish to pypi
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.pypi_token_vapor }}
-        run: twine upload dist/*
+        run: poetry --build publish

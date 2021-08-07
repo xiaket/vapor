@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 """Model definitions in vapor."""
-import json
+from .utils import get_logger
 
-import boto3
-import yaml
 
-from .utils import format_name
+logger = get_logger(__name__)
 
 
 class ResourceBase(type):
@@ -66,81 +64,11 @@ class Resource(metaclass=ResourceBase):
     def template(self):
         """Return the template fragment of the resource."""
         return {
-            self.logical_name: {
-                "Type": self.resource_type,
-                "Properties": self.properties,
-            }
+            "Type": self.resource_type,
+            "Properties": self.properties,
         }
 
     @property
     def properties(self):
         """Return the properties of the resource."""
         return {name: getattr(self, name) for name in dir(self) if name[0].isupper()}
-
-
-class Stack(metaclass=StackBase):
-    """Represents a Cloudformation stack."""
-
-    def __init__(self):
-        self.client = boto3.client("cloudformation")
-
-    @property
-    def name(self):
-        """Name of the stack."""
-        return self.deploy_options.get("name", format_name(self.__class__.__name__))
-
-    @property
-    def deploy_options(self):
-        """Shortcut to DeployOptions dict provided in Subclasses."""
-        return getattr(self, "DeployOptions", {})
-
-    @property
-    def template(self):
-        """Internal python representation of a Cloudformation template."""
-        if not hasattr(self, "Resources"):
-            raise ValueError("Please define Resources in your stack.")
-        # Resources is defined in child classes.
-        # pylint: disable=E1101
-        tmplt = {
-            "AWSTemplateFormatVersion": "2010-09-09",
-            "Resources": [resource().template for resource in self.Resources],
-        }
-        optionals = [
-            "Conditions",
-            "Mappings",
-            "Metadata",
-            "Outputs",
-            "Parameters",
-            "Rules",
-            "Transform",
-        ]
-        for name in optionals:
-            if hasattr(self, name):
-                tmplt[name] = getattr(self, name)
-
-        return tmplt
-
-    @property
-    def json(self):
-        """Return Cloudformaiton template in json format"""
-        return json.dumps(self.template, indent=2)
-
-    @property
-    def yaml(self):
-        """Return Cloudformaiton template in yaml format"""
-        return yaml.dump(self.template)
-
-    def deploy(self):
-        """Wrapper around different steps in the stack deployment process."""
-        self.pre_deploy()
-        self.deploy_stack()
-        self.post_deploy()
-
-    def pre_deploy(self):
-        """Allowing the subclass to add additional steps before the deployment."""
-
-    def post_deploy(self):
-        """Allowing the subclass to add additional steps after the deployment."""
-
-    def deploy_stack(self):
-        """Deploy stack changes via changeset."""

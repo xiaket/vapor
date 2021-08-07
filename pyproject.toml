@@ -1,0 +1,37 @@
+[tool.poetry]
+name = "vapor"
+version = "0.0.4"
+description = "Django ORM meets Cloudformation"
+authors = ["Kai Xia <kaix+github@fastmail.com>"]
+license = "MIT"
+readme = "README.md"
+homepage = "https://github.com/xiaket/vapor"
+keywords = ["cloudformation", "boto3"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Topic :: Utilities",
+]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+boto3 = "^1.18"
+PyYAML = "^5.4.1"
+
+[tool.poetry.dev-dependencies]
+pytest = "^6.2.4"
+pytest-cov = "^2.12.1"
+pylint = "^2.9.6"
+coveralls = "^3.2.0"
+moto = { version = "^2.2.2.dev27", extras = ["cloudformation"]}
+
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pylint."MESSAGES CONTROL"]
+disable = [
+    "logging-fstring-interpolation",
+]

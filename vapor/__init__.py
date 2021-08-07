@@ -6,7 +6,8 @@ import sys
 
 from importlib.machinery import ModuleSpec
 
-from .models import ResourceBase, StackBase, Resource, Stack
+from .models import ResourceBase, StackBase, Resource
+from .stack import Stack
 
 
 class AWSFinder:
