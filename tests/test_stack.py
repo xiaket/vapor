@@ -9,7 +9,7 @@ from unittest.mock import MagicMock
 
 import boto3
 import pytest
-from moto import mock_cloudformation
+from moto import mock_cloudformation, mock_s3
 
 # vapor generates modules on demand.
 # pylint: disable=E0611
@@ -161,6 +161,7 @@ def test_stack_create_changeset_complex_update():
     cfn.create_stack(StackName=stack.name, TemplateBody=stack.json)
 
     # Change existing bucket while adding a new one
+    old_name = Bucket.BucketName
     Bucket.BucketName = "change-of-name"
     stack.Resources = [Bucket, NewBucket]
 
@@ -185,6 +186,7 @@ def test_stack_create_changeset_complex_update():
     assert modify_change["ResourceChange"]["LogicalResourceId"] == "Bucket"
 
     # Cleanup
+    Bucket.BucketName = old_name
     cfn.delete_change_set(ChangeSetName=name, StackName=stack.name)
     cfn.delete_stack(StackName=stack.name)
 
@@ -234,6 +236,33 @@ def test_stack_wait_changeset():
             "Type": "Resource",
         }
     ]
+
+
+@mock_cloudformation
+def test_stack_empty_changeset():
+    """Test wait changeset call with empty changeset."""
+    cfn = boto3.client("cloudformation")
+    stack = S3Stack()
+    cfn.create_stack(StackName=stack.name, TemplateBody=stack.json)
+
+    # testing this private method.
+    # pylint: disable=E1101,W0212
+    create_stack, name = stack._Stack__create_changeset()
+    assert create_stack is False
+
+    empty_changeset_response = {
+        "Status": "FAILED",
+        "StatusReason": "No updates are to be performed.",
+        "ExecutionStatus": "UNAVAILABLE",
+    }
+    stack.client.describe_change_set = MagicMock(return_value=empty_changeset_response)
+
+    # testing this private method.
+    # pylint: disable=E1101,W0212
+    changes = stack._Stack__wait_changeset(name)
+    assert changes == []
+
+    cfn.delete_stack(StackName=stack.name)
 
 
 @mock_cloudformation
@@ -309,3 +338,94 @@ def test_stack_dunder_deploy_update():
 
     # cleanup
     cfn.delete_stack(StackName=stack.name)
+
+
+@mock_s3
+@mock_cloudformation
+def test_stack_deploy():
+    """Test stack deploy with wetrun."""
+    cfn = boto3.client("cloudformation")
+    stack = S3Stack()
+
+    stack.deploy(dryrun=False, wait=True)
+    assert stack.status == "CREATE_COMPLETE"
+
+    s3 = boto3.client("s3")
+    buckets = s3.list_buckets()["Buckets"]
+    assert len(buckets) == 1
+    assert buckets[0]["Name"] == Bucket.BucketName
+
+    # cleanup
+    cfn.delete_stack(StackName=stack.name)
+
+@mock_s3
+@mock_cloudformation
+def test_stack_deploy_hooks():
+    """Test stack deploy hooks with dryrun and wetrun."""
+    cfn = boto3.client("cloudformation")
+    stack = S3Stack()
+
+    stack.pre_deploy = MagicMock(return_value=None)
+    stack.post_deploy = MagicMock(return_value=None)
+    stack.deploy(dryrun=True, wait=True)
+    stack.pre_deploy.assert_called()
+    stack.post_deploy.assert_called()
+
+    stack.deploy(dryrun=False, wait=True)
+    stack.pre_deploy.assert_called()
+    stack.post_deploy.assert_called()
+
+    # cleanup
+    cfn.delete_stack(StackName=stack.name)
+
+@mock_s3
+@mock_cloudformation
+def test_stack_delete():
+    """Test delete stack."""
+    cfn = boto3.client("cloudformation")
+    stack = S3Stack()
+    cfn.create_stack(StackName=stack.name, TemplateBody=stack.json)
+
+    s3 = boto3.client("s3")
+    buckets = s3.list_buckets()["Buckets"]
+    assert len(buckets) == 1
+    assert buckets[0]["Name"] == Bucket.BucketName
+
+    stack.delete(dryrun=True, wait=True)
+    buckets = s3.list_buckets()["Buckets"]
+    assert len(buckets) == 1
+
+    stack.delete(dryrun=False, wait=True)
+    assert stack.status == "DOES_NOT_EXIST"
+    buckets = s3.list_buckets()["Buckets"]
+    assert len(buckets) == 0
+
+
+@mock_cloudformation
+def test_stack_delete_hooks():
+    """Test stack delete hooks with dryrun and wetrun."""
+    cfn = boto3.client("cloudformation")
+    stack = S3Stack()
+    cfn.create_stack(StackName=stack.name, TemplateBody=stack.json)
+
+    stack.pre_delete = MagicMock(return_value=None)
+    stack.post_delete = MagicMock(return_value=None)
+
+    stack.delete(dryrun=True, wait=True)
+    stack.pre_delete.assert_called()
+    stack.post_delete.assert_called()
+
+    stack.delete(dryrun=False, wait=True)
+    stack.pre_delete.assert_called()
+    stack.post_delete.assert_called()
+
+
+@mock_cloudformation
+def test_stack_dunder_delete():
+    """Test stack deletion."""
+    cfn = boto3.client("cloudformation")
+    stack = S3Stack()
+    cfn.create_stack(StackName=stack.name, TemplateBody=stack.json)
+    assert stack.status == "CREATE_COMPLETE"
+
+    stack._Stack__delete(dryrun=False, wait=False)

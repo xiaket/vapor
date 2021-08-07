@@ -163,11 +163,32 @@ class Stack(metaclass=StackBase):
                 self.client.delete_stack(StackName=self.name)
             logger.info("Skipping deployment as this is a dry run.")
 
-    def delete(self, dryrun=True, wait=True):
-        """Wrapper around different steps in the stack deletion process."""
-        self.__delete(dryrun, wait)
+    def pre_deploy(self, dryrun, wait):
+        """Allowing the subclass to add additional steps before the deployment."""
+        if self.status == "ROLLBACK_COMPLETE":
+            logger.info("Deleting stack in ROLLBACK_COMPLETE state.")
+            if not dryrun:
+                self.delete(dryrun, wait)
 
     def post_deploy(self, dryrun, wait):
+        """Allowing the subclass to add additional steps after the deployment."""
+        # this is a hook, user can potentially use `self` in a subclass.
+        # pylint: disable=R0201
+        logger.info(f"Nothing to be done in post-deploy hook. {dryrun=}, {wait=}.")
+
+    def delete(self, dryrun=True, wait=True):
+        """Wrapper around different steps in the stack deletion process."""
+        self.pre_delete(dryrun, wait)
+        self.__delete(dryrun, wait)
+        self.post_delete(dryrun, wait)
+
+    def pre_delete(self, dryrun, wait):
+        """Allowing the subclass to add additional steps before the deletion."""
+        # this is a hook, user can potentially use `self` in a subclass.
+        # pylint: disable=R0201
+        logger.info(f"Nothing to be done in pre-delete hook. {dryrun=}, {wait=}.")
+
+    def post_delete(self, dryrun, wait):
         """Allowing the subclass to add additional steps after the deletion."""
         # this is a hook, user can potentially use `self` in a subclass.
         # pylint: disable=R0201
@@ -175,13 +196,13 @@ class Stack(metaclass=StackBase):
 
     def __delete(self, dryrun, wait):
         """Delete stack."""
-
-    def pre_deploy(self, dryrun, wait):
-        """Allowing the subclass to add additional steps before the deployment."""
-        if self.status == "ROLLBACK_COMPLETE":
-            logger.info("Deleting stack in ROLLBACK_COMPLETE state.")
-            if not dryrun:
-                self.delete(dryrun, wait)
+        if dryrun:
+            logger.info("Skipping deletion as this is a dry run.")
+        else:
+            logger.info(f"Deleting stack: `{self.name}`.")
+            self.client.delete_stack(StackName=self.name)
+            if wait and not dryrun:
+                self.__wait_stack()
 
     def __create_changeset(self):
         """Create a changeset."""
@@ -255,7 +276,11 @@ class Stack(metaclass=StackBase):
     def __wait_stack(self):
         while True:
             current_status = self.status
-            if current_status.endswith("FAILED") or current_status.endswith("COMPLETE"):
+            if current_status == "DOES_NOT_EXIST":
+                # Delete complete
+                return
+
+            if current_status.split("_")[-1] in ["FAILED", "COMPLETE"]:
                 break
             logger.info(f"Waiting till stack operation completes: {current_status}.")
             time.sleep(5)
@@ -264,7 +289,6 @@ class Stack(metaclass=StackBase):
         bad_statuses = [
             "UPDATE_ROLLBACK_COMPLETE",
             "ROLLBACK_COMPLETE",
-            "DELETE_COMPLETE",
         ]
-        if current_status in bad_statuses:
+        if current_status in bad_statuses or current_status.endswith("FAILED"):
             raise RuntimeError("Failed to create/update stack.")
