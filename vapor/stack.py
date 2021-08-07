@@ -185,7 +185,7 @@ class Stack(metaclass=StackBase):
 
     def __create_changeset(self):
         """Create a changeset."""
-        suffix = random.randbytes(4).hex()
+        suffix = bytearray(random.getrandbits(8) for _ in range(4)).hex()
         name = f"{datetime.now().strftime('%F-%H-%M-%S')}-{suffix}"
         parameters = [
             {"ParameterKey": key, "ParameterValue": value}
