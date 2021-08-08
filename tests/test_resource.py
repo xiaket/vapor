@@ -4,12 +4,9 @@ Testing Resource model.
 
 We will define an S3 resource and check it's properties.
 """
-import pytest
-
 # vapor generates modules on demand.
 # pylint: disable=E0611
-from vapor import S3, Ref
-from vapor.models import replace_fn
+from vapor import S3
 
 
 class Bucket(S3.Bucket):
@@ -70,39 +67,3 @@ def test_resurce_inheritance():
         },
         "Type": "AWS::S3::Bucket",
     }
-
-
-def test_replace_fn():
-    """test the replace_fn function."""
-    node = {
-        "DictProp": {
-            "Key": Ref("ParamA"),
-            "ListValues": ["ValueA", 12, Ref("ParamB"), 35.3],
-        },
-        "ListProp": [
-            "Value1",
-            {"Key1": "Value2", "Key2": Ref("ParamC")},
-            Ref("ParamD"),
-        ],
-        "NormalProp": Ref("ParamE"),
-        "IntProp": 42,
-        "FloatType": 3.14,
-    }
-    replaced = replace_fn(node)
-    assert replaced == {
-        "DictProp": {
-            "Key": {"Ref": "ParamA"},
-            "ListValues": ["ValueA", 12, {"Ref": "ParamB"}, 35.3],
-        },
-        "FloatType": 3.14,
-        "IntProp": 42,
-        "ListProp": [
-            "Value1",
-            {"Key1": "Value2", "Key2": {"Ref": "ParamC"}},
-            {"Ref": "ParamD"},
-        ],
-        "NormalProp": {"Ref": "ParamE"},
-    }
-
-    with pytest.raises(ValueError):
-        replace_fn({"class": Bucket()})

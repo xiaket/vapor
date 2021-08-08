@@ -46,6 +46,8 @@ class S3Stack(Stack):
 class BucketWithNoName(S3.Bucket):
     """test S3 resource with no bucket name"""
 
+    # This is our DSL, user don't have to define methods.
+    # pylint: disable=R0903
     VersioningConfiguration = {"Status": "Suspended"}
     BucketName = Ref("BName")
 
