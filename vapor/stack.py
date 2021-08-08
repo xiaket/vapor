@@ -222,7 +222,7 @@ class Stack(metaclass=StackBase):
             "Tags": tags,
             "ChangeSetName": name,
             "ChangeSetType": "UPDATE" if self.exists else "CREATE",
-            "Capabilities": self.deploy_options.get("Capabilities", []),
+            "Capabilities": self.deploy_options.get("capabilities", []),
             "TemplateBody": self.yaml,
         }
 
