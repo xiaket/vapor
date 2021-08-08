@@ -71,4 +71,34 @@ class Resource(metaclass=ResourceBase):
     @property
     def properties(self):
         """Return the properties of the resource."""
-        return {name: getattr(self, name) for name in dir(self) if name[0].isupper()}
+        return {
+            name: replace_fn(getattr(self, name))
+            for name in dir(self)
+            if name[0].isupper()
+        }
+
+
+class Ref:
+    """Represents a ref function in Cloudformation."""
+    # This is our DSL, it's a very thin wrapper around dictionary.
+    # pylint: disable=R0903
+    def __init__(self, target):
+        """Creates a Ref node with a target."""
+        self.target = target
+
+    def render(self):
+        """Render the node as a dictionary."""
+        return {"Ref": self.target}
+
+
+def replace_fn(node):
+    """Iteratively replace all Fn/Ref in the node"""
+    if isinstance(node, list):
+        return [replace_fn(item) for item in node]
+    if isinstance(node, dict):
+        return {name: replace_fn(value) for name, value in node.items()}
+    if isinstance(node, (str, int, float)):
+        return node
+    if isinstance(node, Ref):
+        return node.render()
+    raise ValueError(f"Invalid value specified in the code: {node}")

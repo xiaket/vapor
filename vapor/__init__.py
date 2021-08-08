@@ -6,7 +6,7 @@ import sys
 
 from importlib.machinery import ModuleSpec
 
-from .models import ResourceBase, StackBase, Resource
+from .models import ResourceBase, StackBase, Resource, Ref
 from .stack import Stack
 
 
