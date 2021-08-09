@@ -1,7 +1,6 @@
 TODOs:
 
-- make cfn parameters work
-- make cfn functions work
 - validate template using cfn-lint/cfn-guard before deploy
 - cli to convert json/yml to python class. 
 - have a batteries directory and a way to register/use them.
+- trailing events
