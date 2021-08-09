@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Model definitions in vapor."""
+from .fn import replace_fn
 from .utils import get_logger
 
 
@@ -71,4 +72,8 @@ class Resource(metaclass=ResourceBase):
     @property
     def properties(self):
         """Return the properties of the resource."""
-        return {name: getattr(self, name) for name in dir(self) if name[0].isupper()}
+        return {
+            name: replace_fn(getattr(self, name))
+            for name in dir(self)
+            if name[0].isupper()
+        }

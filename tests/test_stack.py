@@ -13,7 +13,7 @@ from moto import mock_cloudformation, mock_s3
 
 # vapor generates modules on demand.
 # pylint: disable=E0611
-from vapor import S3, Stack
+from vapor import S3, Stack, Ref
 
 
 os.environ["AWS_DEFAULT_REGION"] = "us-east-1"
@@ -41,6 +41,31 @@ class S3Stack(Stack):
 
     Resources = [Bucket]
     Description = "Minimal stack with a single S3 bucket."
+
+
+class BucketWithNoName(S3.Bucket):
+    """test S3 resource with no bucket name"""
+
+    # This is our DSL, user don't have to define methods.
+    # pylint: disable=R0903
+    VersioningConfiguration = {"Status": "Suspended"}
+    BucketName = Ref("BName")
+
+
+class StackWithParam(Stack):
+    """Test stack"""
+
+    Resources = [BucketWithNoName]
+    Description = "Minimal stack with a single S3 bucket."
+    Parameters = {
+        "BName": {"Description": "Name of the bucket", "Type": "String"},
+    }
+
+    DeployOptions = {
+        "parameters": {
+            "BName": "bucket-name-as-parameter",
+        }
+    }
 
 
 def test_stack_name():
@@ -358,6 +383,7 @@ def test_stack_deploy():
     # cleanup
     cfn.delete_stack(StackName=stack.name)
 
+
 @mock_s3
 @mock_cloudformation
 def test_stack_deploy_hooks():
@@ -377,6 +403,7 @@ def test_stack_deploy_hooks():
 
     # cleanup
     cfn.delete_stack(StackName=stack.name)
+
 
 @mock_s3
 @mock_cloudformation
@@ -431,3 +458,30 @@ def test_stack_dunder_delete():
     # testing this private method.
     # pylint: disable=E1101,W0212
     stack._Stack__delete(dryrun=False, wait=False)
+
+
+@mock_s3
+@mock_cloudformation
+def test_stack_deploy_with_parameter():
+    """Test stack deploy with parameter."""
+    cfn = boto3.client("cloudformation")
+    stack = StackWithParam()
+
+    # sadly moto does not parse parameters when we are creating a changeset.
+    # so instead of using deploy, we are using create_stack here.
+    cfn.create_stack(
+        StackName=stack.name,
+        TemplateBody=stack.json,
+        Parameters=[
+            {'ParameterKey': 'BName', 'ParameterValue': 'some-value'},
+        ],
+    )
+    assert stack.status == "CREATE_COMPLETE"
+
+    s3_cli = boto3.client("s3")
+    buckets = s3_cli.list_buckets()["Buckets"]
+    assert len(buckets) == 1
+    assert buckets[0]["Name"] == "some-value"
+
+    # cleanup
+    cfn.delete_stack(StackName=stack.name)
