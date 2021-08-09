@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "vapor"
-version = "0.0.4"
+version = "0.0.5"
 description = "Django ORM meets Cloudformation"
 authors = ["Kai Xia <kaix+github@fastmail.com>"]
 license = "MIT"

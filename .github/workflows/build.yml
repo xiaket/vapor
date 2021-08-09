@@ -43,10 +43,5 @@ jobs:
           python-version: 3.9
       - name: Install dependencies
         run: pip install poetry
-      - name: Build
-        run: poetry build
       - name: Publish to pypi
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.pypi_token_vapor }}
-        run: poetry --build publish
+        run: poetry publish --build --username=__token__ --password=${{ secrets.pypi_token_vapor }}
