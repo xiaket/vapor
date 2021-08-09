@@ -12,7 +12,9 @@ def replace_fn(node):
         return {name: replace_fn(value) for name, value in node.items()}
     if isinstance(node, (str, int, float)):
         return node
-    if isinstance(node, (Ref, BaseFn)):
+    if isinstance(node, Ref):
+        return node.render()
+    if hasattr(Fn, node.__class__.__name__):
         return node.render()
     raise ValueError(f"Invalid value specified in the code: {node}")
 
@@ -31,28 +33,22 @@ class Ref:
         return {"Ref": self.target}
 
 
-class BaseFn:
-    """Base class for all Cloudformation functions."""
-    # pylint: disable=R0903
-
-    def render(self):
-        """Will be overridden in subclasses."""
-        raise NotImplementedError
-
-
-class Base64(BaseFn):
+class Base64:
     """Fn::Base64 function."""
+
     # pylint: disable=R0903
 
     def __init__(self, value):
         self.value = value
 
     def render(self):
+        """Render the node with Fn::Base64."""
         return {"Fn::Base64": replace_fn(self.value)}
 
 
-class Cidr(BaseFn):
+class Cidr:
     """Fn::Cidr function."""
+
     # pylint: disable=R0903
 
     def __init__(self, ipblock, count, cidr_bits):
@@ -61,6 +57,7 @@ class Cidr(BaseFn):
         self.cidr_bits = cidr_bits
 
     def render(self):
+        """Render the node with Fn::Cidr."""
         return {
             "Fn::Cidr": [
                 replace_fn(self.ipblock),
@@ -70,19 +67,22 @@ class Cidr(BaseFn):
         }
 
 
-class And(BaseFn):
+class And:
     """Fn::And function."""
+
     # pylint: disable=R0903
 
     def __init__(self, *args):
-        self.conditions = args
+        self.conditions = list(args)
 
     def render(self):
+        """Render the node with Fn::And."""
         return {"Fn::And": replace_fn(self.conditions)}
 
 
-class Equals(BaseFn):
+class Equals:
     """Fn::Equals function."""
+
     # pylint: disable=R0903
 
     def __init__(self, lhs, rhs):
@@ -90,11 +90,13 @@ class Equals(BaseFn):
         self.rhs = rhs
 
     def render(self):
+        """Render the node with Fn::Equals."""
         return {"Fn::Equals": [replace_fn(self.lhs), replace_fn(self.rhs)]}
 
 
-class If(BaseFn):
+class If:
     """Fn::If function."""
+
     # pylint: disable=R0903
 
     def __init__(self, condition, true_value, false_value):
@@ -103,6 +105,7 @@ class If(BaseFn):
         self.false_value = false_value
 
     def render(self):
+        """Render the node with Fn::If."""
         return {
             "Fn::If": [
                 replace_fn(self.condition),
@@ -112,30 +115,35 @@ class If(BaseFn):
         }
 
 
-class Not(BaseFn):
+class Not:
     """Fn::Not function."""
+
     # pylint: disable=R0903
 
     def __init__(self, condition):
         self.condition = condition
 
     def render(self):
+        """Render the node with Fn::Not."""
         return {"Fn::Not": [replace_fn(self.condition)]}
 
 
-class Or(BaseFn):
+class Or:
     """Fn::Or function."""
+
     # pylint: disable=R0903
 
     def __init__(self, *args):
-        self.conditions = args
+        self.conditions = list(args)
 
     def render(self):
+        """Render the node with Fn::Or."""
         return {"Fn::Or": replace_fn(self.conditions)}
 
 
-class FindInMap(BaseFn):
+class FindInMap:
     """Fn::FindInMap function."""
+
     # pylint: disable=R0903
 
     def __init__(self, map_name, l1key, l2key):
@@ -144,6 +152,7 @@ class FindInMap(BaseFn):
         self.l2key = l2key
 
     def render(self):
+        """Render the node with Fn::FindInMap."""
         return {
             "Fn::FindInMap": [
                 replace_fn(self.map_name),
@@ -153,8 +162,9 @@ class FindInMap(BaseFn):
         }
 
 
-class GetAtt(BaseFn):
+class GetAtt:
     """Fn::GetAtt function."""
+
     # pylint: disable=R0903
 
     def __init__(self, logical_name, attr):
@@ -162,45 +172,53 @@ class GetAtt(BaseFn):
         self.attr = attr
 
     def render(self):
+        """Render the node with Fn::GetAtt."""
         return {"Fn::GetAtt": [replace_fn(self.logical_name), replace_fn(self.attr)]}
 
 
-class GetAZs(BaseFn):
+class GetAZs:
     """Fn::GetAZs function."""
+
     # pylint: disable=R0903
 
     def __init__(self, region):
         self.region = region
 
     def render(self):
+        """Render the node with Fn::GetAZs."""
         return {"Fn::GetAZs": replace_fn(self.region)}
 
 
-class ImportValue(BaseFn):
+class ImportValue:
     """Fn::ImportValue function."""
+
     # pylint: disable=R0903
 
     def __init__(self, export):
         self.export = export
 
     def render(self):
+        """Render the node with Fn::ImportValue."""
         return {"Fn::ImportValue": replace_fn(self.export)}
 
 
-class Join(BaseFn):
+class Join:
     """Fn::Join function."""
+
     # pylint: disable=R0903
 
-    def __init__(self, delimiter, *args):
+    def __init__(self, delimiter, elements):
         self.delimiter = delimiter
-        self.elements = args
+        self.elements = elements
 
     def render(self):
+        """Render the node with Fn::Join."""
         return {"Fn::Join": [replace_fn(self.delimiter), replace_fn(self.elements)]}
 
 
-class Select(BaseFn):
+class Select:
     """Fn::Select function."""
+
     # pylint: disable=R0903
 
     def __init__(self, index, elements):
@@ -208,11 +226,13 @@ class Select(BaseFn):
         self.elements = elements
 
     def render(self):
+        """Render the node with Fn::Select."""
         return {"Fn::Select": [replace_fn(self.index), replace_fn(self.elements)]}
 
 
-class Split(BaseFn):
+class Split:
     """Fn::Split function."""
+
     # pylint: disable=R0903
 
     def __init__(self, delimiter, target):
@@ -220,34 +240,53 @@ class Split(BaseFn):
         self.target = target
 
     def render(self):
+        """Render the node with Fn::Split."""
         return {"Fn::Split": [replace_fn(self.delimiter), replace_fn(self.target)]}
 
 
-class Sub(BaseFn):
+class Sub:
     """Fn::Sub function."""
+
     # pylint: disable=R0903
 
-    def __init__(self, target, **kwargs):
+    def __init__(self, target, mapping=None):
+        if not isinstance(target, str):
+            raise ValueError(
+                f"The first argument of Fn::Sub must be string: `{target}`"
+            )
+        if mapping is None:
+            self.mapping = {}
+
         self.target = target
-        self.kwargs = kwargs
+        self.mapping = mapping
 
     def render(self):
-        return {"Fn::Sub": [replace_fn(self.target), replace_fn(self.kwargs)]}
+        """Render the node with Fn::Sub."""
+        if self.mapping:
+            return {"Fn::Sub": [replace_fn(self.target), replace_fn(self.mapping)]}
+        return {"Fn::Sub": replace_fn(self.target)}
 
 
-class Transform(BaseFn):
+class Transform:
     """Fn::Transform function."""
+
     # pylint: disable=R0903
 
-    def __init__(self, name, **parameters):
-        self.name = name
-        self.parameters = parameters
+    def __init__(self, construct):
+        is_dict = isinstance(construct, dict)
+        match_keys = set(construct.keys()) == {"Name", "Parameters"}
+
+        if not is_dict or not match_keys:
+            raise ValueError("Invalid Transform construct")
+
+        self.construct = construct
 
     def render(self):
+        """Render the node with Fn::Transform."""
         return {
             "Fn::Transform": {
-                "Name": replace_fn(self.name),
-                "Parameters": replace_fn(self.parameters),
+                "Name": replace_fn(self.construct["Name"]),
+                "Parameters": replace_fn(self.construct["Parameters"]),
             }
         }
 
@@ -259,6 +298,7 @@ class Fn:
     Rationale is instead of having to import all the functions,
     we just import Fn and use any function as Fn.FuncName
     """
+
     # pylint: disable=R0903
 
     Base64 = Base64
