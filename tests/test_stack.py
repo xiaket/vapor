@@ -160,7 +160,7 @@ def test_stack_create_changeset_update():
     cfn.create_stack(StackName=stack.name, TemplateBody=stack.json)
 
     # modify bucket attribute
-    stack.Resources[0].VersionControlConfiguration = {"Status": "Disabled"}
+    stack.Resources[0].BucketName = "another-name"
 
     # testing this private method.
     # pylint: disable=E1101,W0212

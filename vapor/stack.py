@@ -10,6 +10,10 @@ import boto3
 import yaml
 from botocore.exceptions import ClientError
 
+from .hooks import (
+    cleanup_rollback_complete,
+    check_template_with_cfn_lint,
+)
 from .models import StackBase
 from .utils import get_logger
 
@@ -56,6 +60,13 @@ def format_changes(changes):
 class Stack(metaclass=StackBase):
     """Represents a Cloudformation stack."""
 
+    Hooks = {
+        "pre_deploy": [
+            cleanup_rollback_complete,
+            check_template_with_cfn_lint,
+        ],
+    }
+
     def __init__(self):
         self.client = boto3.client("cloudformation")
 
@@ -63,6 +74,11 @@ class Stack(metaclass=StackBase):
     def name(self):
         """Name of the stack."""
         return self.deploy_options.get("name", format_name(self.__class__.__name__))
+
+    @property
+    def region(self):
+        """Region of the stack."""
+        return self.client.meta.region_name
 
     @property
     def deploy_options(self):
@@ -165,16 +181,13 @@ class Stack(metaclass=StackBase):
 
     def pre_deploy(self, dryrun, wait):
         """Allowing the subclass to add additional steps before the deployment."""
-        if self.status == "ROLLBACK_COMPLETE":
-            logger.info("Deleting stack in ROLLBACK_COMPLETE state.")
-            if not dryrun:
-                self.delete(dryrun, wait)
+        for hook in self.Hooks.get("pre_deploy", []):
+            hook(self, dryrun, wait)
 
     def post_deploy(self, dryrun, wait):
         """Allowing the subclass to add additional steps after the deployment."""
-        # this is a hook, user can potentially use `self` in a subclass.
-        # pylint: disable=R0201
-        logger.info(f"Nothing to be done in post-deploy hook. {dryrun=}, {wait=}.")
+        for hook in self.Hooks.get("post_deploy", []):
+            hook(self, dryrun, wait)
 
     def delete(self, dryrun=True, wait=True):
         """Wrapper around different steps in the stack deletion process."""
@@ -184,15 +197,13 @@ class Stack(metaclass=StackBase):
 
     def pre_delete(self, dryrun, wait):
         """Allowing the subclass to add additional steps before the deletion."""
-        # this is a hook, user can potentially use `self` in a subclass.
-        # pylint: disable=R0201
-        logger.info(f"Nothing to be done in pre-delete hook. {dryrun=}, {wait=}.")
+        for hook in self.Hooks.get("pre_delete", []):
+            hook(self, dryrun, wait)
 
     def post_delete(self, dryrun, wait):
         """Allowing the subclass to add additional steps after the deletion."""
-        # this is a hook, user can potentially use `self` in a subclass.
-        # pylint: disable=R0201
-        logger.info(f"Nothing to be done in post-delete hook. {dryrun=}, {wait=}.")
+        for hook in self.Hooks.get("post_delete", []):
+            hook(self, dryrun, wait)
 
     def __delete(self, dryrun, wait):
         """Delete stack."""
