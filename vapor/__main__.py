@@ -28,6 +28,7 @@ from vapor import Stack, Ref, Fn, {{ template.services }}
 
 # Please change the name of the class
 {{ template.stack_code }}
+
 '''
 
 
@@ -46,7 +47,7 @@ class CfnTemplate:
     @property
     def services(self):
         """Services from the resources."""
-        return "".join(sorted({resource.service for resource in self.resources}))
+        return ", ".join(sorted({resource.service for resource in self.resources}))
 
     @cached_property
     def stack_ast(self):
@@ -58,11 +59,11 @@ class CfnTemplate:
 
         body = []
         resources = ast.Assign(
-            targets=[
-                ast.Name(id="Resources", ctx=ast.Store())
-            ],
+            targets=[ast.Name(id="Resources", ctx=ast.Store())],
             value=ast.List(
-                elts=[ast.Name(id=name, ctx=ast.Load()) for name in self.data["Resources"]],
+                elts=[
+                    ast.Name(id=name, ctx=ast.Load()) for name in self.data["Resources"]
+                ],
                 ctx=ast.Load(),
             ),
             lineno=0,
@@ -92,9 +93,8 @@ class CfnTemplate:
             body.append(node)
 
         return ast.ClassDef(
-            name='VaporStack',
-            bases=[
-                ast.Name(id='Stack', ctx=ast.Load())],
+            name="VaporStack",
+            bases=[ast.Name(id="Stack", ctx=ast.Load())],
             keywords=[],
             body=body,
             decorator_list=[],
@@ -105,6 +105,7 @@ class CfnTemplate:
         """Python code as string constructed from ast."""
         return ast.unparse(self.stack_ast)
 
+
 def parse_fn(func, node):
     """Parse an Fn::Something construct."""
     if isinstance(node, list):
@@ -113,29 +114,25 @@ def parse_fn(func, node):
         args = [parse_node(node)]
     return ast.Call(
         func=ast.Attribute(
-            value=ast.Name(id='Fn', ctx=ast.Load()),
-            attr=func,
-            ctx=ast.Load()
+            value=ast.Name(id="Fn", ctx=ast.Load()), attr=func, ctx=ast.Load()
         ),
         args=args,
-        keywords=[]
+        keywords=[],
     )
 
 
 def parse_node(node):
     """Turn a python object back to ast object."""
     if isinstance(node, list):
-        return ast.List(
-            elts=[parse_node(item) for item in node], ctx=ast.Load()
-        )
+        return ast.List(elts=[parse_node(item) for item in node], ctx=ast.Load())
     if isinstance(node, dict):
         if len(node) == 1:
             key = list(node)[0]
             if key == "Ref":
                 return ast.Call(
-                    func=ast.Name(id='Ref', ctx=ast.Load()),
+                    func=ast.Name(id="Ref", ctx=ast.Load()),
                     args=[ast.Constant(value=node[key])],
-                    keywords=[]
+                    keywords=[],
                 )
             if key.startswith("Fn::"):
                 func = key.split("::")[1]
@@ -164,7 +161,7 @@ class Resource:
         Return the ast object of the resource instance.
         This is later used to construct the python source code.
         """
-        resource_type = self.data['Type'].split('::')[-1]
+        resource_type = self.data["Type"].split("::")[-1]
         body = []
         provider = self.data["Type"].split("::")[0]
         # It looks like a bug in python 3.9 that if the lineno is not added
@@ -229,7 +226,8 @@ def import_():
         pathobj = Path(filename)
         with pathobj.open() as fobj:
             if pathobj.suffix in [".yml", ".yaml"]:
-                data = to_json(fobj.read())
+                content = fobj.read().strip()
+                data = to_json(content)
             elif pathobj.suffix == ".json":
                 data = fobj.read()
             else:
@@ -238,9 +236,9 @@ def import_():
                 )
             data = json.loads(data)
 
-        new_filename = (
-            f"{pathobj.stem}.{datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}.py"
-        )
-        content = render(pathobj.name, data)
-        with open(new_filename, "w") as fobj:
-            fobj.write(content)
+        newname = f"{pathobj.stem}-{datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}.py"
+        fileobj = pathobj.with_name(newname)
+        if fileobj.exists():
+            raise RuntimeError(f"Destination file exists: {fileobj.as_posix()}")
+        output = render(pathobj.name, data)
+        fileobj.write_text(output)

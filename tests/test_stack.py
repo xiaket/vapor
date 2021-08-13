@@ -473,7 +473,7 @@ def test_stack_deploy_with_parameter():
         StackName=stack.name,
         TemplateBody=stack.json,
         Parameters=[
-            {'ParameterKey': 'BName', 'ParameterValue': 'some-value'},
+            {"ParameterKey": "BName", "ParameterValue": "some-value"},
         ],
     )
     assert stack.status == "CREATE_COMPLETE"
