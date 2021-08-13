@@ -105,6 +105,22 @@ class CfnTemplate:
         """Python code as string constructed from ast."""
         return ast.unparse(self.stack_ast)
 
+def parse_fn(func, node):
+    """Parse an Fn::Something construct."""
+    if isinstance(node, list):
+        args = [parse_node(item) for item in node]
+    else:
+        args = [parse_node(node)]
+    return ast.Call(
+        func=ast.Attribute(
+            value=ast.Name(id='Fn', ctx=ast.Load()),
+            attr=func,
+            ctx=ast.Load()
+        ),
+        args=args,
+        keywords=[]
+    )
+
 
 def parse_node(node):
     """Turn a python object back to ast object."""
@@ -123,15 +139,7 @@ def parse_node(node):
                 )
             if key.startswith("Fn::"):
                 func = key.split("::")[1]
-                return ast.Call(
-                    func=ast.Attribute(
-                        value=ast.Name(id='Fn', ctx=ast.Load()),
-                        attr=func,
-                        ctx=ast.Load()
-                    ),
-                    args=[parse_node(node[key])],
-                    keywords=[]
-                )
+                return parse_fn(func, node[key])
         keys = []
         values = []
         for key, value in node.items():

@@ -107,3 +107,78 @@ def test_resource_class_ref():
     assert isinstance(call.args, list)
     assert len(call.args) == 1
     assert call.args[0].value == "test"
+
+
+def test_cfn_functions():
+    """Test instantiate resource class with complex cfn functions."""
+    resource = Resource(
+        "Bucket",
+        {
+            "Type": "AWS::S3::Bucket",
+            "Properties": {
+                "Bucketame": {
+                    "Fn::Join": [
+                        "/",
+                        [
+                            "private-app-example.com",
+                            {"Ref": "Environment"},
+                            {
+                                "Fn::Select": [
+                                    "3",
+                                    {"Fn::Split": ["-", {"Ref": "Namespace"}]},
+                                ]
+                            },
+                            "system-logs",
+                        ],
+                    ]
+                }
+            },
+        },
+    )
+    assert resource.logical_name == "Bucket"
+    body = resource.astobj.body
+    assert isinstance(body, list)
+    assert len(body) == 1
+    assert isinstance(body[0].value, ast.Call)
+
+    call = body[0].value
+    assert isinstance(call.func, ast.Attribute)
+    assert isinstance(call.func.value, ast.Name)
+    assert call.func.value.id == "Fn"
+    assert call.func.attr == "Join"
+    assert isinstance(call.args, list)
+    print(ast.dump(call, indent=2))
+    assert len(call.args) == 2
+    assert isinstance(call.args[0], ast.Constant)
+    assert call.args[0].value == "/"
+
+    join_list = call.args[1]
+    assert isinstance(join_list, ast.List)
+    assert len(join_list.elts) == 4
+    assert isinstance(join_list.elts[0], ast.Constant)
+    assert join_list.elts[0].value == "private-app-example.com"
+    assert isinstance(join_list.elts[3], ast.Constant)
+    assert join_list.elts[3].value == "system-logs"
+
+    assert isinstance(join_list.elts[1], ast.Call)
+    assert join_list.elts[1].func.id == "Ref"
+    assert join_list.elts[1].args[0].value == "Environment"
+
+    select_call = join_list.elts[2]
+    assert isinstance(select_call, ast.Call)
+    assert isinstance(select_call.func, ast.Attribute)
+    assert select_call.func.value.id == "Fn"
+    assert select_call.func.attr == "Select"
+    assert len(select_call.args) == 2
+    assert select_call.args[0].value == "3"
+
+    split_call = select_call.args[1]
+    assert isinstance(split_call, ast.Call)
+    assert isinstance(split_call.func, ast.Attribute)
+    assert split_call.func.value.id == "Fn"
+    assert split_call.func.attr == "Split"
+    assert len(split_call.args) == 2
+    assert split_call.args[0].value == "-"
+    assert isinstance(split_call.args[1], ast.Call)
+    assert split_call.args[1].func.id == "Ref"
+    assert split_call.args[1].args[0].value == "Namespace"
