@@ -109,6 +109,20 @@ def test_resource_class_ref():
     assert call.args[0].value == "test"
 
 
+def assert_call_fn(call, name):
+    """Common assertions in a Fn call test."""
+    assert isinstance(call.func, ast.Attribute)
+    assert isinstance(call.func.value, ast.Name)
+    assert call.func.value.id == "Fn"
+    assert call.func.attr == name
+
+
+def assert_constant(obj, value):
+    """Common assertions in a Constant test."""
+    assert isinstance(obj, ast.Constant)
+    assert obj.value == value
+
+
 def test_cfn_functions():
     """Test instantiate resource class with complex cfn functions."""
     resource = Resource(
@@ -121,11 +135,17 @@ def test_cfn_functions():
                         "/",
                         [
                             "private-app-example.com",
-                            {"Ref": "Environment"},
+                            {"Fn::Sub": "${Environment}-suffix"},
                             {
                                 "Fn::Select": [
                                     "3",
                                     {"Fn::Split": ["-", {"Ref": "Namespace"}]},
+                                ]
+                            },
+                            {
+                                "Fn::Select": [
+                                    "0",
+                                    {"Fn::GetAZs": {"Ref": "AWS::Region"}},
                                 ]
                             },
                             "system-logs",
@@ -142,43 +162,41 @@ def test_cfn_functions():
     assert isinstance(body[0].value, ast.Call)
 
     call = body[0].value
-    assert isinstance(call.func, ast.Attribute)
-    assert isinstance(call.func.value, ast.Name)
-    assert call.func.value.id == "Fn"
-    assert call.func.attr == "Join"
+    assert_call_fn(call, "Join")
     assert isinstance(call.args, list)
-    print(ast.dump(call, indent=2))
     assert len(call.args) == 2
-    assert isinstance(call.args[0], ast.Constant)
-    assert call.args[0].value == "/"
+    assert_constant(call.args[0], "/")
 
     join_list = call.args[1]
     assert isinstance(join_list, ast.List)
-    assert len(join_list.elts) == 4
-    assert isinstance(join_list.elts[0], ast.Constant)
-    assert join_list.elts[0].value == "private-app-example.com"
-    assert isinstance(join_list.elts[3], ast.Constant)
-    assert join_list.elts[3].value == "system-logs"
+    assert len(join_list.elts) == 5
+    assert_constant(join_list.elts[0], "private-app-example.com")
+    assert_constant(join_list.elts[4], "system-logs")
 
-    assert isinstance(join_list.elts[1], ast.Call)
-    assert join_list.elts[1].func.id == "Ref"
-    assert join_list.elts[1].args[0].value == "Environment"
+    assert_call_fn(join_list.elts[1], "Sub")
+    assert join_list.elts[1].args[0].value == "${Environment}-suffix"
 
     select_call = join_list.elts[2]
-    assert isinstance(select_call, ast.Call)
-    assert isinstance(select_call.func, ast.Attribute)
-    assert select_call.func.value.id == "Fn"
-    assert select_call.func.attr == "Select"
+    assert_call_fn(select_call, "Select")
     assert len(select_call.args) == 2
-    assert select_call.args[0].value == "3"
+    assert_constant(select_call.args[0], "3")
 
     split_call = select_call.args[1]
-    assert isinstance(split_call, ast.Call)
-    assert isinstance(split_call.func, ast.Attribute)
-    assert split_call.func.value.id == "Fn"
-    assert split_call.func.attr == "Split"
+    assert_call_fn(split_call, "Split")
     assert len(split_call.args) == 2
-    assert split_call.args[0].value == "-"
+    assert_constant(split_call.args[0], "-")
     assert isinstance(split_call.args[1], ast.Call)
     assert split_call.args[1].func.id == "Ref"
     assert split_call.args[1].args[0].value == "Namespace"
+
+    select_call = join_list.elts[3]
+    assert_call_fn(select_call, "Select")
+    assert len(select_call.args) == 2
+    assert_constant(select_call.args[0], "0")
+
+    getazs_call = select_call.args[1]
+    assert_call_fn(getazs_call, "GetAZs")
+    assert len(getazs_call.args) == 1
+    assert isinstance(getazs_call.args[0], ast.Call)
+    assert getazs_call.args[0].func.id == "Ref"
+    assert getazs_call.args[0].args[0].value == "AWS::Region"
