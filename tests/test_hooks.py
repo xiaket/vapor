@@ -4,6 +4,7 @@ Testing hooks.
 """
 import json
 import os
+from copy import deepcopy
 from types import SimpleNamespace
 
 import pytest
@@ -14,22 +15,11 @@ from moto.cloudformation import cloudformation_backend
 # pylint: disable=E0611
 from vapor import S3, Stack
 from vapor.hooks import check_template_with_cfn_lint
+from tests.fixtures import SIMPLE_JSON
 
 
 os.environ["AWS_DEFAULT_REGION"] = "us-east-1"
 
-TEMPLATE = {
-    "AWSTemplateFormatVersion": "2010-09-09",
-    "Resources": {
-        "Bucket": {
-            "Type": "AWS::S3::Bucket",
-            "Properties": {
-                "BucketName": "test",
-                "VersioningConfiguration": {"Status": "Suspended"},
-            },
-        }
-    },
-}
 
 class Bucket(S3.Bucket):
     """test S3 resource"""
@@ -49,7 +39,7 @@ class S3Stack(Stack):
 
 def test_cfn_lint():
     """test running cfn-lint"""
-    good_template = TEMPLATE.copy()
+    good_template = deepcopy(SIMPLE_JSON)
     fake_stack = SimpleNamespace()
     fake_stack.region = "us-east-1"
     fake_stack.name = "test-cfn"
@@ -58,7 +48,7 @@ def test_cfn_lint():
     # This should be fine.
     check_template_with_cfn_lint(fake_stack, True, True)
 
-    bad_template = TEMPLATE.copy()
+    bad_template = deepcopy(SIMPLE_JSON)
     bad_template["Resources"]["Bucket"]["Properties"]["Invalid"] = True
     fake_stack.json = json.dumps(bad_template)
     with pytest.raises(SystemExit) as wrapper_exit:

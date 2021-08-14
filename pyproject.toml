@@ -14,11 +14,16 @@ classifiers = [
     "Topic :: Utilities",
 ]
 
+[tool.poetry.scripts]
+vapor-import = "vapor.__main__:import_"
+
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.9"
 boto3 = "^1.18"
 PyYAML = "^5.4.1"
 cfn-lint = "^0.53.0"
+Jinja2 = "^3.0.1"
+cfn-flip = "^1.2.3"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.4"

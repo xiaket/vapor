@@ -45,6 +45,8 @@ class StackBase(type):
 class Resource(metaclass=ResourceBase):
     """Represents a resource defintion in Cloudformation."""
 
+    _Meta = {"provider": "AWS"}
+
     @property
     def logical_name(self):
         """Return the logical of the resource, mapping to the name of the class."""
@@ -59,7 +61,8 @@ class Resource(metaclass=ResourceBase):
             if parent.__module__ == "vapor.models" and parent.__name__ == "Resource":
                 break
             base_class = parent
-        return f"AWS::{base_class.__module__}::{base_class.__name__}"
+        provider = self._Meta.get("provider", "AWS")
+        return f"{provider}::{base_class.__module__}::{base_class.__name__}"
 
     @property
     def template(self):
