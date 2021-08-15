@@ -1,3 +1,10 @@
 TODOs:
 
+- Dockerhub image
+- vapor-import use argparse
+- add python3.8 back
 - tailing events
+- type annotations
+- library and books(similar to patterns in ecs)
+- Manage several stacks as an app with different layers.
+- new cli to deploy/delete app
