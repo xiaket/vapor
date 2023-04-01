@@ -10,6 +10,10 @@ then
   source .env
 fi
 
+init () {
+  poetry install
+}
+
 tests () {
   export AWS_ACCESS_KEY_ID='testing'
   export AWS_SECRET_ACCESS_KEY='testing'
@@ -26,6 +30,7 @@ tests () {
 }
 
 lint () {
+  init
   poetry run pylint vapor tests
 }
 

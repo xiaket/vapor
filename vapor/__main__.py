@@ -224,7 +224,7 @@ def import_():
     """Convert existing cloudformation templates into vapor files."""
     for filename in sys.argv[1:]:
         pathobj = Path(filename)
-        with pathobj.open() as fobj:
+        with pathobj.open(encoding="utf-8") as fobj:
             if pathobj.suffix in [".yml", ".yaml"]:
                 content = fobj.read().strip()
                 data = to_json(content)
@@ -241,4 +241,4 @@ def import_():
         if fileobj.exists():
             raise RuntimeError(f"Destination file exists: {fileobj.as_posix()}")
         output = render(pathobj.name, data)
-        fileobj.write_text(output)
+        fileobj.write_text(output, encoding="utf-8")

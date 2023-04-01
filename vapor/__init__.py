@@ -24,7 +24,6 @@ class AWSFinder:
         """
         If we are importing vapor things, create a module for it.
         """
-        # This is just following protocol
         # pylint: disable=W0613
         if name.startswith("vapor."):
             _, service = name.split(".", 1)
@@ -34,13 +33,10 @@ class AWSFinder:
     def create_module(self, _):
         """Do nothing specific here."""
         # This is just following protocol
-        # pylint: disable=R0201
         return None
 
     def exec_module(self, module):
         """Create a dynamic class and return it."""
-        # This is just following protocol
-        # pylint: disable=R0201
         def _getattr(name):
             cls = type(name, (Resource,), {"_module": module})
             return cls

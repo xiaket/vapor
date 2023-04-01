@@ -10,16 +10,16 @@ logger = get_logger(__name__)
 class ResourceBase(type):
     """Metaclass for all cfn resources."""
 
-    def __new__(cls, name, bases, attrs):
+    def __new__(mcs, name, bases, attrs):
         super_new = super().__new__
 
         # Only perform custom logic for the subclasses of Resource, but not Resource
         # itself.
         parents = [b for b in bases if isinstance(b, ResourceBase)]
         if not parents:
-            return super_new(cls, name, bases, attrs)
+            return super_new(mcs, name, bases, attrs)
 
-        new_class = super_new(cls, name, bases, attrs)
+        new_class = super_new(mcs, name, bases, attrs)
         if "_module" in attrs:
             # We need to pass it down to the subclass
             setattr(new_class, "__module__", attrs["_module"].__name__)
@@ -30,15 +30,15 @@ class ResourceBase(type):
 class StackBase(type):
     """Metaclass for all cfn stacks."""
 
-    def __new__(cls, name, bases, attrs):
+    def __new__(mcs, name, bases, attrs):
         super_new = super().__new__
 
         # Only perform custom logic for the subclasses of Stack, but not Stack itself.
         parents = [b for b in bases if isinstance(b, StackBase)]
         if not parents:
-            return super_new(cls, name, bases, attrs)
+            return super_new(mcs, name, bases, attrs)
 
-        new_class = super_new(cls, name, bases, attrs)
+        new_class = super_new(mcs, name, bases, attrs)
         return new_class
 
 

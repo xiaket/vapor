@@ -14,6 +14,10 @@ from vapor.__main__ import CfnTemplate, Resource, import_
 from tests.fixtures import COMPLEX_RESOURCE, SIMPLE_JSON, SIMPLE_OUTPUT, SIMPLE_YAML
 
 
+def _lines(content):
+    return {l.strip() for l in content.splitlines() if l.strip()}
+
+
 def test_resource_class_str():
     """Test resource class."""
     resource = Resource(
@@ -236,7 +240,7 @@ def test_render():
     with tempfile.TemporaryDirectory() as dirname:
         tmpdir = pathlib.Path(dirname)
         filename = tmpdir / "test.json"
-        with open(filename, "w") as fobj:
+        with open(filename, "w", encoding="utf-8") as fobj:
             fobj.write(json.dumps(SIMPLE_JSON))
 
         sys.argv = ["vapor-import", filename.as_posix()]
@@ -250,8 +254,7 @@ def test_render():
 
         assert content != ""
 
-    lines = lambda content: [l.strip() for l in content.splitlines() if l.strip()]
-    assert lines(content) == lines(SIMPLE_OUTPUT.format(filename=filename.name))
+    assert _lines(content) == _lines(SIMPLE_OUTPUT.format(filename=filename.name))
 
 
 def test_render_yaml():
@@ -259,7 +262,7 @@ def test_render_yaml():
     with tempfile.TemporaryDirectory() as dirname:
         tmpdir = pathlib.Path(dirname)
         filename = tmpdir / "test.yml"
-        with open(filename, "w") as fobj:
+        with open(filename, "w", encoding="utf-8") as fobj:
             fobj.write(SIMPLE_YAML)
 
         sys.argv = ["vapor-import", filename.as_posix()]
@@ -273,8 +276,7 @@ def test_render_yaml():
 
         assert content != ""
 
-    lines = lambda content: [l.strip() for l in content.splitlines() if l.strip()]
-    assert lines(content) == lines(SIMPLE_OUTPUT.format(filename=filename.name))
+    assert _lines(content) == _lines(SIMPLE_OUTPUT.format(filename=filename.name))
 
 
 def test_render_invalid_suffix():
