@@ -23,12 +23,9 @@ from vapor import Stack, Ref, Fn, {{ template.services }}
 {% for resource in template.resources %}
 {{ resource.code }}
 
-
 {% endfor %}
-
 # Please change the name of the class
 {{ template.stack_code }}
-
 '''
 
 
@@ -212,7 +209,7 @@ class Resource:
 
 def render(filename, data):
     """Render the dict into a vapor python script."""
-    template = jinja2.Template(TEMPLATE)
+    template = jinja2.Template(TEMPLATE.lstrip())
     cfn = CfnTemplate(data)
     return template.render(
         original_file_name=filename,

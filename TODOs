@@ -1,5 +1,6 @@
 TODOs:
 
-- cli to convert json/yml to python class. 
 - tailing events
 - readthedocs
+- cfn-guard
+- have a batteries directory and a way to register/use them.
