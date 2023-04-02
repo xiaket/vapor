@@ -32,7 +32,7 @@ jobs:
 
   publish:
     needs: build
-    if: github.ref == 'refs/heads/main' && github.repository == 'xiaket/vapor'
+    if: github.ref == 'refs/heads/release' && github.repository == 'xiaket/vapor'
     name: Publish
     runs-on: ubuntu-latest
     steps:
@@ -46,4 +46,3 @@ jobs:
         run: pip install poetry
       - name: Publish to pypi
         run: poetry publish --build --username=__token__ --password=${{ secrets.pypi_token_vapor }}
-        continue-on-error: true
