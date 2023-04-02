@@ -15,7 +15,7 @@ classifiers = [
 ]
 
 [tool.poetry.scripts]
-vapor-import = "vapor.__main__:import_"
+vapor = "vapor.__main__:main"
 
 [tool.poetry.dependencies]
 python = "^3.9"

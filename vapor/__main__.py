@@ -3,6 +3,7 @@
 Cli interface for vapor
 """
 import ast
+import argparse
 import json
 import sys
 from datetime import datetime
@@ -58,9 +59,7 @@ class CfnTemplate:
         resources = ast.Assign(
             targets=[ast.Name(id="Resources", ctx=ast.Store())],
             value=ast.List(
-                elts=[
-                    ast.Name(id=name, ctx=ast.Load()) for name in self.data["Resources"]
-                ],
+                elts=[ast.Name(id=name, ctx=ast.Load()) for name in self.data["Resources"]],
                 ctx=ast.Load(),
             ),
             lineno=0,
@@ -110,9 +109,7 @@ def parse_fn(func, node):
     else:
         args = [parse_node(node)]
     return ast.Call(
-        func=ast.Attribute(
-            value=ast.Name(id="Fn", ctx=ast.Load()), attr=func, ctx=ast.Load()
-        ),
+        func=ast.Attribute(value=ast.Name(id="Fn", ctx=ast.Load()), attr=func, ctx=ast.Load()),
         args=args,
         keywords=[],
     )
@@ -217,10 +214,12 @@ def render(filename, data):
     )
 
 
-def import_():
+def import_(args):
     """Convert existing cloudformation templates into vapor files."""
-    for filename in sys.argv[1:]:
+    for filename in args.files:
         pathobj = Path(filename)
+        if not pathobj.exists():
+            raise RuntimeError(f"File does not exist: {pathobj.as_posix()}")
         with pathobj.open(encoding="utf-8") as fobj:
             if pathobj.suffix in [".yml", ".yaml"]:
                 content = fobj.read().strip()
@@ -239,3 +238,34 @@ def import_():
             raise RuntimeError(f"Destination file exists: {fileobj.as_posix()}")
         output = render(pathobj.name, data)
         fileobj.write_text(output, encoding="utf-8")
+
+
+def deploy(args):
+    pass
+
+
+def parse_args():
+    """Parse commandline arguments."""
+    parser = argparse.ArgumentParser(prog="vapor")
+    parser.add_argument("-d", "--debug", action="store_true", help="Enable debug output.")
+    subparsers = parser.add_subparsers(title="subcommands")
+    transcribe_parser = subparsers.add_parser(
+        name="transcribe",
+        description="Transcribe an existing Cloudformation template into a python file",
+        add_help=False,
+    )
+    transcribe_parser.add_argument('files', nargs='+',
+                    help='Cloudformation template files to convert. Suffix must be yml/yaml/json.')
+    transcribe_parser.set_defaults(func=import_)
+    deploy_parser = subparsers.add_parser(
+        name="deploy", description="Deploy a stack", add_help=False
+    )
+    deploy_parser.set_defaults(func=deploy)
+
+    return parser.parse_args()
+
+
+def main():
+    """Entrypoint for vapor cli."""
+    args = parse_args()
+    args.func(args)
